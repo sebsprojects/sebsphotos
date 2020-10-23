@@ -16,6 +16,7 @@ SceneWim *wim = 0;
 void render()
 {
   glClear(GL_COLOR_BUFFER_BIT);
+  drawSceneWim(wim);
   //glViewport(0, 0, (GLuint) scene->resolution[0],
   //                 (GLuint) scene->resolution[1]);
   //glActiveTexture(GL_TEXTURE0);
@@ -41,6 +42,8 @@ i32 main(int argc, char **argv)
   char *shaderDir = "shader";
   platform = createPlatform();
   wim = createSceneWim(shaderDir);
+  updateImgGeom(wim, -0.95, -0.95, 0.95, 0.95);
+  updateImgTexCoord(wim, 200, 200, 1000, 1000);
   while (!glfwWindowShouldClose(platform->window)) {
     render();
     glfwSwapBuffers(platform->window);
