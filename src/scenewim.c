@@ -92,8 +92,8 @@ void initUniforms(SceneWim *s)
 {
   s->imgTexDim.loc = glGetUniformLocation(s->imgShader.prog, "texDim");
   s->imgTexDim.dim = 2;
-  s->imgTexDim.vec[0] = 0; s->imgTexDim.vec[1] = 0;
-  s->imgTexDim.vec[2] = 0; s->imgTexDim.vec[3] = 0;
+  s->imgTexDim.vec[0] = 0.0; s->imgTexDim.vec[1] = 0.0;
+  s->imgTexDim.vec[2] = 0.0; s->imgTexDim.vec[3] = 0.0;
 }
 
 // Should be called after geometry is initialized
@@ -122,11 +122,13 @@ void updateBuffers(SceneWim *s)
   if(s->imgGeom.isModified) {
     glBindBuffer(GL_ARRAY_BUFFER, s->imgGeom.id);
     glBufferSubData(GL_ARRAY_BUFFER, 0, s->imgGeom.byteSize, s->imgGeom.data);
+    s->imgGeom.isModified = 0;
   }
   if(s->imgTexCoord.isModified) {
     glBindBuffer(GL_ARRAY_BUFFER, s->imgTexCoord.id);
     glBufferSubData(GL_ARRAY_BUFFER, 0, s->imgTexCoord.byteSize,
                     s->imgTexCoord.data);
+    s->imgTexCoord.isModified = 0;
   }
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -155,6 +157,25 @@ void updateImgTex(SceneWim *s, Texture *tex)
   s->imgTex->samplerLoc = glGetUniformLocation(s->imgShader.prog, "tex");
   s->imgTexDim.vec[0] = tex->texWidth;
   s->imgTexDim.vec[1] = tex->texHeight;
+}
+
+void updateSceneDimensions(SceneWim *s,
+                           f32 w, f32 h, f32 x0, f32 y0, f32 x1, f32 y1)
+{
+  f32 sw = x1 - x0;
+  f32 sh = y1 - y0;
+  f32 tw = s->imgTex->imgWidth;
+  f32 th = s->imgTex->imgHeight;
+  f32 wRatio = tw / sw;
+  f32 hRatio = th / sh;
+  f32 scaling = 1.0 / (wRatio >= hRatio ? wRatio : hRatio);
+  f32 xpad = sw - scaling * tw;
+  f32 ypad = sh - scaling * th;
+  updateImgGeom(s,
+                2.0 * (x0 + 0.5 * xpad) / w - 1.0,
+                2.0 * (y0 + 0.5 * ypad) / h - 1.0,
+                2.0 * (x1 - 0.5 * xpad) / w - 1.0,
+                2.0 * (y1 - 0.5 * ypad) / h - 1.0);
 }
 
 void drawSceneWim(SceneWim *s)

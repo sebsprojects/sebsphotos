@@ -3,19 +3,26 @@
 
 #define GLFW_INCLUDE_ES2
 #include <GLFW/glfw3.h>
-#include <math.h>
 
 #include "common.h"
+#include "scenewim.h"
 
 
 struct Platform {
   GLFWwindow *window;
-  f64 startTime;
+  i32 winWidth;
+  i32 winHeight;
+  SceneWim *wim;
 };
 typedef struct Platform Platform;
 
-Platform *createPlatform();
+Platform *createPlatform(char *shaderDir);
 void destroyPlatform(Platform *p);
+
+void updateViewport(Platform *p);
+void initGL();
+
+void render(Platform *p);
 
 void printOpenGLInfo();
 
