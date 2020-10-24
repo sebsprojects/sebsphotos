@@ -4,10 +4,10 @@
 #include <jpeglib.h>
 #include <math.h>
 
-#include "jpg.h"
+#include "texture.h"
 
 
-TextureContainer *allocTextureFromJPG(char *filePath)
+Texture *allocTextureFromJPG(char *filePath)
 {
   struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr jerr;
@@ -17,7 +17,7 @@ TextureContainer *allocTextureFromJPG(char *filePath)
     printf("Error opening jpg file");
     return 0;
   }
-  TextureContainer *tc = malloc(sizeof(TextureContainer));
+  Texture *tc = malloc(sizeof(Texture));
 
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_decompress(&cinfo);
@@ -29,14 +29,16 @@ TextureContainer *allocTextureFromJPG(char *filePath)
   tc->imgHeight = cinfo.output_height;
   tc->texWidth = pow(2, ceil(log(tc->imgWidth)/log(2)));
   tc->texHeight = pow(2, ceil(log(tc->imgHeight)/log(2)));
+  tc->id = 0;
+  tc->samplerLoc = 0;
 
   i32 pixelSize = cinfo.output_components;
   i32 rowStride = tc->texWidth * pixelSize;
-  tc->texBuffer = calloc(tc->texWidth * tc->texHeight * pixelSize, sizeof(u8));
+  tc->imgBuffer = calloc(tc->texWidth * tc->texHeight * pixelSize, sizeof(u8));
 
   while(cinfo.output_scanline < cinfo.output_height) {
     u8 *rowBufferArray[1];
-    rowBufferArray[0] = tc->texBuffer + cinfo.output_scanline * rowStride;
+    rowBufferArray[0] = tc->imgBuffer + cinfo.output_scanline * rowStride;
     jpeg_read_scanlines(&cinfo, rowBufferArray, 1);
   }
 
@@ -46,7 +48,22 @@ TextureContainer *allocTextureFromJPG(char *filePath)
   return tc;
 }
 
-void freeTexture(TextureContainer *tc) {
-  free(tc->texBuffer);
-  free(tc);
+void initTexture(Texture *t)
+{
+  glGenTextures(1, &t->id);
+  glBindTexture(GL_TEXTURE_2D, t->id);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+               t->texWidth, t->texHeight, 0, GL_RGB,
+               GL_UNSIGNED_BYTE, t->imgBuffer);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void destroyTexture(Texture *t)
+{
+  free(t->imgBuffer);
+  free(t);
 }

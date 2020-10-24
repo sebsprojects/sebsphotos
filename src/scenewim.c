@@ -12,6 +12,7 @@ SceneWim *createSceneWim(char *shaderDir)
   initImgIndices(scene);
   initImgGeom(scene);
   initImgTexCoord(scene);
+  initUniforms(scene);
   createBuffers(scene);
   return scene;
 }
@@ -46,45 +47,53 @@ void initImgShader(SceneWim *s, char *shaderDir)
 void initImgIndices(SceneWim *s)
 {
   s->imgIndices.id = 0;
-  s->imgIndices.type = GL_SHORT;
   s->imgIndices.count = 6;
-  s->imgIndices.byteSize = sizeof(u16) * s->imgIndices.count * 1;
-  s->imgIndices.isModified = 0;
+  s->imgIndices.byteSize = sizeof(u16) * s->imgIndices.count;
   s->imgIndices.data = malloc(s->imgIndices.byteSize);
-  *arrayu16_at(s->imgIndices.data, 0) = 0;
-  *arrayu16_at(s->imgIndices.data, 1) = 1;
-  *arrayu16_at(s->imgIndices.data, 2) = 2;
-  *arrayu16_at(s->imgIndices.data, 3) = 2;
-  *arrayu16_at(s->imgIndices.data, 4) = 3;
-  *arrayu16_at(s->imgIndices.data, 5) = 0;
+  s->imgIndices.data[0] = 0; s->imgIndices.data[1] = 1;
+  s->imgIndices.data[2] = 2; s->imgIndices.data[3] = 2;
+  s->imgIndices.data[4] = 3; s->imgIndices.data[5] = 0;
 }
 
 void initImgGeom(SceneWim *s)
 {
   s->imgGeom.id = 0;
-  s->imgGeom.type = GL_FLOAT;
+  s->imgGeom.loc = 0;
   s->imgGeom.count = 4;
-  s->imgGeom.byteSize = sizeof(f32) * s->imgGeom.count * 4;
+  s->imgGeom.dim = 4;
+  s->imgGeom.byteSize = sizeof(f32) * s->imgGeom.count * s->imgGeom.dim;
   s->imgGeom.isModified = 0;
   s->imgGeom.data = malloc(s->imgGeom.byteSize);
   for(u32 i = 0; i < 16; i++) {
-    if(i % 4 == 2) { *arrayf32_at(s->imgGeom.data, i) = 0.0; } // z coord
-    else if(i % 4 == 3) { *arrayf32_at(s->imgGeom.data, i) = 1.0; } // w coord
-    else { *arrayf32_at(s->imgGeom.data, i) = 0.0; }
+    if(i % 4 == 2) { s->imgGeom.data[i] = 0.0; } // z coord
+    else if(i % 4 == 3) { s->imgGeom.data[i] = 1.0; } // w coord
+    else { s->imgGeom.data[i] = 0.0; }
   }
+  s->imgGeom.loc = glGetAttribLocation(s->imgShader.prog, "in_position");
 }
 
 void initImgTexCoord(SceneWim *s)
 {
   s->imgTexCoord.id = 0;
-  s->imgTexCoord.type = GL_FLOAT;
+  s->imgTexCoord.loc = 0;
   s->imgTexCoord.count = 4;
-  s->imgTexCoord.byteSize = sizeof(f32) * s->imgTexCoord.count * 2;
+  s->imgTexCoord.dim = 2;
+  s->imgTexCoord.byteSize =
+    sizeof(f32) * s->imgTexCoord.count * s->imgTexCoord.dim;
   s->imgTexCoord.isModified = 0;
   s->imgTexCoord.data = malloc(s->imgTexCoord.byteSize);
   for(u32 i = 0; i < 8; i++) {
-    *arrayf32_at(s->imgTexCoord.data, i) = 0.0;
+    s->imgTexCoord.data[i] = 0.0;
   }
+  s->imgTexCoord.loc = glGetAttribLocation(s->imgShader.prog, "in_texCoord");
+}
+
+void initUniforms(SceneWim *s)
+{
+  s->imgTexDim.loc = glGetUniformLocation(s->imgShader.prog, "texDim");
+  s->imgTexDim.dim = 2;
+  s->imgTexDim.vec[0] = 0; s->imgTexDim.vec[1] = 0;
+  s->imgTexDim.vec[2] = 0; s->imgTexDim.vec[3] = 0;
 }
 
 // Should be called after geometry is initialized
@@ -94,11 +103,11 @@ void createBuffers(SceneWim *s)
   glGenBuffers(1, &s->imgTexCoord.id);
   // Vertex Buffers
   glBindBuffer(GL_ARRAY_BUFFER, s->imgGeom.id);
-  glBufferData(GL_ARRAY_BUFFER, s->imgGeom.byteSize, s->imgGeom.data,
-               GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, s->imgGeom.byteSize,
+               s->imgGeom.data, GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, s->imgTexCoord.id);
-  glBufferData(GL_ARRAY_BUFFER, s->imgTexCoord.byteSize, s->imgTexCoord.data,
-               GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, s->imgTexCoord.byteSize,
+               s->imgTexCoord.data, GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   // Index Buffer
   glGenBuffers(1, &s->imgIndices.id);
@@ -124,28 +133,28 @@ void updateBuffers(SceneWim *s)
 
 void updateImgGeom(SceneWim *s, f32 x0, f32 y0, f32 x1, f32 y1)
 {
-  *arrayf32_at(s->imgGeom.data, 0)  = x0;
-  *arrayf32_at(s->imgGeom.data, 1)  = y1; // upper left
-  *arrayf32_at(s->imgGeom.data, 4)  = x1;
-  *arrayf32_at(s->imgGeom.data, 5)  = y1; // upper right
-  *arrayf32_at(s->imgGeom.data, 8)  = x1;
-  *arrayf32_at(s->imgGeom.data, 9)  = y0; // lower right
-  *arrayf32_at(s->imgGeom.data, 12) = x0;
-  *arrayf32_at(s->imgGeom.data, 13) = y0; // lower left
+  s->imgGeom.data[0]  = x0; s->imgGeom.data[1]  = y1; // upper left
+  s->imgGeom.data[4]  = x1; s->imgGeom.data[5]  = y1; // upper right
+  s->imgGeom.data[8]  = x1; s->imgGeom.data[9]  = y0; // lower right
+  s->imgGeom.data[12] = x0; s->imgGeom.data[13] = y0; // lower left
   s->imgGeom.isModified = 1;
 }
 
 void updateImgTexCoord(SceneWim *s, f32 u0, f32 v0, f32 u1, f32 v1)
 {
-  *arrayf32_at(s->imgTexCoord.data, 0) = u0;
-  *arrayf32_at(s->imgTexCoord.data, 1) = v0; // lower left
-  *arrayf32_at(s->imgTexCoord.data, 2) = u1;
-  *arrayf32_at(s->imgTexCoord.data, 3) = v0; // lower right
-  *arrayf32_at(s->imgTexCoord.data, 4) = u1;
-  *arrayf32_at(s->imgTexCoord.data, 5) = v1; // upper right
-  *arrayf32_at(s->imgTexCoord.data, 6) = u0;
-  *arrayf32_at(s->imgTexCoord.data, 7) = v1; // upper left
+  s->imgTexCoord.data[0] = u0; s->imgTexCoord.data[1] = v0; // lower left
+  s->imgTexCoord.data[2] = u1; s->imgTexCoord.data[3] = v0; // lower right
+  s->imgTexCoord.data[4] = u1; s->imgTexCoord.data[5] = v1; // upper right
+  s->imgTexCoord.data[6] = u0; s->imgTexCoord.data[7] = v1; // upper left
   s->imgTexCoord.isModified = 1;
+}
+
+void updateImgTex(SceneWim *s, Texture *tex)
+{
+  s->imgTex = tex;
+  s->imgTex->samplerLoc = glGetUniformLocation(s->imgShader.prog, "tex");
+  s->imgTexDim.vec[0] = tex->texWidth;
+  s->imgTexDim.vec[1] = tex->texHeight;
 }
 
 void drawSceneWim(SceneWim *s)
@@ -154,17 +163,26 @@ void drawSceneWim(SceneWim *s)
   glUseProgram(s->imgShader.prog);
   glBindBuffer(GL_ARRAY_BUFFER, s->imgGeom.id);
   // TODO: Get valid attribute locations!
-  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(s->imgGeom.loc, 4, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(s->imgGeom.loc);
   glBindBuffer(GL_ARRAY_BUFFER, s->imgTexCoord.id);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(s->imgTexCoord.loc, 2, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(s->imgTexCoord.loc);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  if(s->imgTex != 0) {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, s->imgTex->id);
+    glUniform1i(s->imgTex->samplerLoc, 0); // Value is texture unit num
+    loadUniformf(&s->imgTexDim);
+  }
+
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s->imgIndices.id);
   glDrawElements(GL_TRIANGLES, s->imgIndices.count, GL_UNSIGNED_SHORT, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-  glDisableVertexAttribArray(0);
-  glDisableVertexAttribArray(1);
+
+  glDisableVertexAttribArray(s->imgTexCoord.loc);
+  glDisableVertexAttribArray(s->imgGeom.loc);
   glUseProgram(0);
   // FPS print
   //f64 now = getCurrentTime();
@@ -172,48 +190,17 @@ void drawSceneWim(SceneWim *s)
   //scene->lastDrawTime = now;
 }
 
-
-//createGeometry(&p->vertexBuffer, &p->textureBuffer, &p->indexBuffer);
-//TextureContainer *texCont = allocTextureFromJPG(texFilePath);
-//createTexture(&p->texObject, texCont);
-//freeTexture(texCont);
-
-/*
-void createGeometry(GLuint *vb, GLuint *tb, GLuint *ib)
+void loadUniformf(Uniformf *u)
 {
+  if(u->dim == 1) { glUniform1f(u->loc, u->vec[0]); }
+  if(u->dim == 2) { glUniform2f(u->loc, u->vec[0], u->vec[1]); }
+  if(u->dim == 3) { glUniform3f(u->loc, u->vec[0], u->vec[1], u->vec[2]); }
+  if(u->dim == 4) {
+    glUniform4f(u->loc, u->vec[0], u->vec[1], u->vec[2], u->vec[3]);
+  }
 }
-
-void createTexture(GLuint *texObj, TextureContainer *texCont)
-{
-  glGenTextures(1, texObj);
-  glBindTexture(GL_TEXTURE_2D, *texObj);
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-               texCont->texWidth, texCont->texHeight, 0, GL_RGB,
-               GL_UNSIGNED_BYTE, texCont->texBuffer);
-  glBindTexture(GL_TEXTURE_2D, 0);
-}
-*/
 
 // ---------------------------------------------------------------------------
-
-f32 *arrayf32_at(void *data, u32 index)
-{
-  return &((f32*) data)[index];
-}
-
-i32 *arrayi32_at(void *data, u32 index)
-{
-  return &((i32*) data)[index];
-}
-
-u16 *arrayu16_at(void *data, u32 index)
-{
-  return &((u16*) data)[index];
-}
 
 char *allocFileContent(char *path)
 {

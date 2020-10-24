@@ -1,9 +1,11 @@
 attribute vec4 in_position;
 attribute vec2 in_texCoord;
 
-varying vec2 tex_coord;
+uniform vec2 texDim;
+
+varying vec2 texCoord;
 
 void main() {
-  tex_coord = in_texCoord / 1000.0;
+  texCoord = in_texCoord / texDim;
   gl_Position = in_position;
 }

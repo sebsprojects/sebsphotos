@@ -41,7 +41,7 @@ Platform *createPlatform()
   p->startTime = getCurrentTime();
   createGlfw(&p->window);
   glClearColor(0.0, 0.0, 0.0, 1.0);
-  glViewport(0, 0, 640, 480);
+  glViewport(0, 0, 640, 280);
   return p;
 }
 
