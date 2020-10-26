@@ -17,7 +17,6 @@ Texture *allocTextureFromJPG(char *filePath)
     printf("Error opening jpg file");
     return 0;
   }
-  Texture *tc = malloc(sizeof(Texture));
 
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_decompress(&cinfo);
@@ -25,27 +24,34 @@ Texture *allocTextureFromJPG(char *filePath)
   jpeg_read_header(&cinfo, 1);
   jpeg_start_decompress(&cinfo);
 
-  tc->imgWidth = cinfo.output_width;
-  tc->imgHeight = cinfo.output_height;
-  tc->texWidth = pow(2, ceil(log(tc->imgWidth)/log(2)));
-  tc->texHeight = pow(2, ceil(log(tc->imgHeight)/log(2)));
-  tc->id = 0;
-  tc->samplerLoc = 0;
-
+  Texture *t = allocEmptyTexture(cinfo.output_width, cinfo.output_height);
   i32 pixelSize = cinfo.output_components;
-  i32 rowStride = tc->texWidth * pixelSize;
-  tc->imgBuffer = calloc(tc->texWidth * tc->texHeight * pixelSize, sizeof(u8));
+  i32 rowStride = t->texWidth * pixelSize;
+  t->imgBuffer = calloc(t->texWidth * t->texHeight * pixelSize, sizeof(u8));
 
   while(cinfo.output_scanline < cinfo.output_height) {
     u8 *rowBufferArray[1];
-    rowBufferArray[0] = tc->imgBuffer + cinfo.output_scanline * rowStride;
+    rowBufferArray[0] = t->imgBuffer + cinfo.output_scanline * rowStride;
     jpeg_read_scanlines(&cinfo, rowBufferArray, 1);
   }
 
   jpeg_finish_decompress(&cinfo);
   fclose(file);
   jpeg_destroy_decompress(&cinfo);
-  return tc;
+  return t;
+}
+
+Texture *allocEmptyTexture(u32 width, u32 height)
+{
+  Texture *t = malloc(sizeof(Texture));
+  t->imgWidth = width;
+  t->imgHeight = height;
+  t->texWidth = pow(2, ceil(log(t->imgWidth)/log(2)));
+  t->texHeight = pow(2, ceil(log(t->imgHeight)/log(2)));
+  t->id = 0;
+  t->samplerLoc = 0;
+  t->imgBuffer = 0;
+  return t;
 }
 
 void initTexture(Texture *t)
@@ -64,6 +70,7 @@ void initTexture(Texture *t)
 
 void destroyTexture(Texture *t)
 {
-  free(t->imgBuffer);
+  if(t->imgBuffer != 0) { free(t->imgBuffer); }
   free(t);
 }
+

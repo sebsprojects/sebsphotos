@@ -12,12 +12,13 @@ struct SceneWim {
   VBO imgTexCoord;
   IBO imgIndices;
   Uniformf imgTexDim;
+  Uniformf zoomCenter;
   Texture *imgTex;
   f32 res[2];
   f32 sceneDim[4];
   f32 imgDim[4];
-  f32 texScrollDim[4];
   f32 scrollLevel;
+  f32 texScrollDim[4];
 };
 typedef struct SceneWim SceneWim;
 
@@ -41,8 +42,5 @@ void updateImgTexCoord(SceneWim *s, f32 u0, f32 v0, f32 u1, f32 v1);
 void updateImgTex(SceneWim *s, Texture *tex);
 
 void drawSceneWim(SceneWim *scene);
-
-char *allocFileContent(char *path);
-char *allocFullShaderPath(char *baseDir, char *fileName);
 
 #endif

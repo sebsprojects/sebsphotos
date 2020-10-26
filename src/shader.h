@@ -24,6 +24,11 @@ struct ShaderProgram {
 };
 typedef struct ShaderProgram ShaderProgram;
 
-void compileAndLinkShaderProgram(ShaderProgram *p);
+void initStandardShader(ShaderProgram *p, char* shaderDir, char *shaderName);
+
+void compileAndLinkShader(ShaderProgram *p);
+
+char *allocFileContent(char *path);
+char *allocFullShaderPath(char *baseDir, char *fileName, char *ext);
 
 #endif

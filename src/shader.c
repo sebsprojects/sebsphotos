@@ -1,10 +1,28 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "shader.h"
 
 
-void compileAndLinkShaderProgram(ShaderProgram *p)
+void initStandardShader(ShaderProgram *p, char* shaderDir, char *shaderName)
+{
+  p->vert = 0; p->frag = 0; p-> prog = 0;
+  p->error = SHADER_NOERROR;
+  char *vertPath = allocFullShaderPath(shaderDir, shaderName, "vert");
+  char *fragPath = allocFullShaderPath(shaderDir, shaderName, "frag");
+  p->vertSrc = allocFileContent(vertPath);
+  p->fragSrc = allocFileContent(fragPath);
+  free(fragPath);
+  free(vertPath);
+  if(p->error != SHADER_NOERROR) {
+    printf("Error with code %i\n", p->error);
+    //TODO: ERROR
+  }
+  compileAndLinkShader(p);
+}
+
+void compileAndLinkShader(ShaderProgram *p)
 {
   const GLchar *vertSrc = p->vertSrc;
   const GLchar *fragSrc = p->fragSrc;
@@ -60,5 +78,39 @@ void compileAndLinkShaderProgram(ShaderProgram *p)
   }
   glDetachShader(p->prog, p->vert);
   glDetachShader(p->prog, p->frag);
+}
+
+char *allocFileContent(char *path)
+{
+  char *buf = 0;
+  FILE *file = fopen(path, "rb");
+  if(file) {
+    fseek(file, 0, SEEK_END);
+    i32 len = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    buf = malloc(len + 1);
+    u32 readLen = fread(buf, 1, len, file);
+    buf[readLen] = '\0';
+    fclose(file);
+  } else {
+    //TODO: ERROR!
+    printf("error in allocFileContent\n");
+    return 0;
+  }
+  return buf;
+}
+
+char *allocFullShaderPath(char *baseDir, char *fileName, char *ext)
+{
+  // add baseDir + / + fileName + . + ext + \0
+  char *fullPath =
+    malloc(strlen(baseDir) + strlen(fileName) + strlen(ext) + 1 + 1 + 1);
+  strcpy(fullPath, baseDir);
+  strcat(fullPath, "/");
+  strcat(fullPath, fileName);
+  strcat(fullPath, ".");
+  strcat(fullPath, ext);
+  printf("full path %s\n", fullPath);
+  return fullPath;
 }
 
