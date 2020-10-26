@@ -13,7 +13,6 @@ i32 main(int argc, char **argv)
   Texture *tex = allocTextureFromJPG("test/test_2.jpg");
   initTexture(tex);
   updateImgTex(platform->wim, tex);
-  updateImgTexCoord(platform->wim, 0, 0, tex->imgWidth, tex->imgHeight);
   // Main loop
   while (!glfwWindowShouldClose(platform->window)) {
     render(platform);

@@ -8,6 +8,11 @@
 SceneWim *createSceneWim(char *shaderDir)
 {
   SceneWim *scene = malloc(sizeof(SceneWim));
+  scene->imgTex = 0;
+  scene->res[0] = 0.0; scene->res[1] = 0.0;
+  scene->sceneDim[0] = 0.0; scene->sceneDim[1] = 0.0;
+  scene->sceneDim[2] = 0.0; scene->sceneDim[3] = 0.0;
+  scene->scrollLevel = 0.0;
   initImgShader(scene, shaderDir);
   initImgIndices(scene);
   initImgGeom(scene);
@@ -157,25 +162,61 @@ void updateImgTex(SceneWim *s, Texture *tex)
   s->imgTex->samplerLoc = glGetUniformLocation(s->imgShader.prog, "tex");
   s->imgTexDim.vec[0] = tex->texWidth;
   s->imgTexDim.vec[1] = tex->texHeight;
+  updateImgTexCoord(s, 0.0, 0.0, s->imgTex->imgWidth, s->imgTex->imgHeight);
+  s->texScrollDim[0] = 0.0;
+  s->texScrollDim[1] = 0.0;
+  s->texScrollDim[2] = s->imgTex->imgWidth;
+  s->texScrollDim[3] = s->imgTex->imgHeight;
 }
 
 void updateSceneDimensions(SceneWim *s,
                            f32 w, f32 h, f32 x0, f32 y0, f32 x1, f32 y1)
 {
-  f32 sw = x1 - x0;
-  f32 sh = y1 - y0;
-  f32 tw = s->imgTex->imgWidth;
-  f32 th = s->imgTex->imgHeight;
-  f32 wRatio = tw / sw;
-  f32 hRatio = th / sh;
-  f32 scaling = 1.0 / (wRatio >= hRatio ? wRatio : hRatio);
-  f32 xpad = sw - scaling * tw;
-  f32 ypad = sh - scaling * th;
-  updateImgGeom(s,
-                2.0 * (x0 + 0.5 * xpad) / w - 1.0,
-                2.0 * (y0 + 0.5 * ypad) / h - 1.0,
-                2.0 * (x1 - 0.5 * xpad) / w - 1.0,
-                2.0 * (y1 - 0.5 * ypad) / h - 1.0);
+  s->res[0] = w; s->res[1] = h;
+  s->sceneDim[0] = x0; s->sceneDim[1] = y0;
+  s->sceneDim[2] = x1; s->sceneDim[3] = y1;
+  if(s->imgTex != 0) {
+    f32 sw = x1 - x0;
+    f32 sh = y1 - y0;
+    f32 tw = s->imgTex->imgWidth;
+    f32 th = s->imgTex->imgHeight;
+    f32 wRatio = tw / sw;
+    f32 hRatio = th / sh;
+    f32 scaling = 1.0 / (wRatio >= hRatio ? wRatio : hRatio);
+    f32 xpad = sw - scaling * tw;
+    f32 ypad = sh - scaling * th;
+    s->imgDim[0] = x0 + 0.5 * xpad; s->imgDim[1] = y0 + 0.5 * ypad;
+    s->imgDim[2] = x1 - 0.5 * xpad; s->imgDim[3] = y1 - 0.5 * ypad;
+    printf("imgDim: %f %f %f %f\n", s->imgDim[0], s->imgDim[1], s->imgDim[2],
+           s->imgDim[3]);
+    updateImgGeom(s, 2.0 * s->imgDim[0] / w - 1.0, 2.0 * s->imgDim[1] / h - 1.0,
+                     2.0 * s->imgDim[2] / w - 1.0, 2.0 * s->imgDim[3] / h - 1.0);
+  }
+}
+
+void updateScrollLevel(SceneWim *s, f32 cx, f32 cy, f32 scrollOffs)
+{
+  if(s->imgTex == 0 || !isInBounds(cx, cy, s->imgDim)) {
+    return;
+  }
+  s->scrollLevel += scrollOffs;
+  f32 icx = cx - s->imgDim[0];
+  f32 icy = cy - s->imgDim[1];
+  f32 oldtw = s->texScrollDim[2] - s->texScrollDim[0];
+  f32 oldth = s->texScrollDim[3] - s->texScrollDim[1];
+  printf("old w/h: %f %f\n", oldtw, oldth);
+  f32 tcx = icx * (oldtw / (s->imgDim[2] - s->imgDim[0])) + s->texScrollDim[0];
+  f32 tcy = icy * (oldth / (s->imgDim[3] - s->imgDim[1])) + s->texScrollDim[1];
+  printf("tcx tcy: %f %f\n", tcx, tcy);
+  f32 scaling = 1.0 + 0.05 * s->scrollLevel;
+  f32 tx = tcx * (1.0 - scaling);
+  f32 ty = tcy * (1.0 - scaling);
+  s->texScrollDim[0] = tx;
+  s->texScrollDim[1] = ty;
+  s->texScrollDim[2] = s->imgTex->imgWidth * scaling + tx;
+  s->texScrollDim[3] = s->imgTex->imgHeight * scaling + ty;
+  updateImgTexCoord(s, tx, ty,
+                       s->texScrollDim[2], s->texScrollDim[3]);
 }
 
 void drawSceneWim(SceneWim *s)
@@ -209,16 +250,6 @@ void drawSceneWim(SceneWim *s)
   //f64 now = getCurrentTime();
   //printf("%.2f ms\n", (now - scene->lastDrawTime) * 1000.0);
   //scene->lastDrawTime = now;
-}
-
-void loadUniformf(Uniformf *u)
-{
-  if(u->dim == 1) { glUniform1f(u->loc, u->vec[0]); }
-  if(u->dim == 2) { glUniform2f(u->loc, u->vec[0], u->vec[1]); }
-  if(u->dim == 3) { glUniform3f(u->loc, u->vec[0], u->vec[1], u->vec[2]); }
-  if(u->dim == 4) {
-    glUniform4f(u->loc, u->vec[0], u->vec[1], u->vec[2], u->vec[3]);
-  }
 }
 
 // ---------------------------------------------------------------------------

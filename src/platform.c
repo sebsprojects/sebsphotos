@@ -21,13 +21,25 @@ void windowResizeCallback(GLFWwindow *w, i32 newWidth, i32 newHeight)
 {
   Platform *p = (Platform *) glfwGetWindowUserPointer(w);
   if(p == 0) {
-    printf("GLFW User Pointer is 0\n");
+    printf("GLFW User Pointer is NULL\n");
   }
   p->winWidth = newWidth;
   p->winHeight = newHeight;
   updateViewport(p);
   updateSceneDimensions(p->wim, newWidth, newHeight,
                         5.0, 5.0, newWidth - 200.0, newHeight - 5.0);
+}
+
+void windowScrollCallback(GLFWwindow *w, f64 xoffs, f64 yoffs)
+{
+  Platform *p = (Platform *) glfwGetWindowUserPointer(w);
+  if(p == 0) {
+    printf("GLFW User Pointer is NULL\n");
+  }
+  f64 cx = 0.0;
+  f64 cy = 0.0;
+  glfwGetCursorPos(w, &cx, &cy);
+  updateScrollLevel(p->wim, (f32) cx, (f32) cy, (f32) yoffs);
 }
 
 // ---------------------------------------------------------------------------
@@ -47,6 +59,7 @@ void createWindow(Platform *platform)
   glfwSetWindowUserPointer(platform->window, platform);
   // Callbacks
   glfwSetFramebufferSizeCallback(platform->window, windowResizeCallback);
+  glfwSetScrollCallback(platform->window, windowScrollCallback);
   glfwMakeContextCurrent(platform->window);
   glfwSwapInterval(1);
 }
