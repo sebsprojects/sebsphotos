@@ -18,14 +18,15 @@ struct Exporter {
   VBO geom;
   VBO texCoord;
   IBO indices;
-  Uniformf imgTexDim;
+  Uniformf texDim;
   GLuint fboId;
   Texture *fboTex;
 };
 typedef struct Exporter Exporter;
 
-Exporter *createExporter();
+Exporter *createExporter(char *shaderDir);
 void destroyExporter(Exporter *e);
+
 
 void exportImage(char *exportPath, ExportInfo inf);
 
