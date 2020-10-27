@@ -36,10 +36,40 @@ void windowScrollCallback(GLFWwindow *w, f64 xoffs, f64 yoffs)
   if(p == 0) {
     printf("GLFW User Pointer is NULL\n");
   }
-  f64 cx = 0.0;
-  f64 cy = 0.0;
+  f64 cx = 0.0; f64 cy = 0.0;
   glfwGetCursorPos(w, &cx, &cy);
-  updateScrollLevel(p->wim, (f32) cx, (f32) cy, (f32) yoffs);
+}
+
+void windowMouseButtonCallback(GLFWwindow *w, i32 button, i32 action, i32 mods)
+{
+  Platform *p = (Platform *) glfwGetWindowUserPointer(w);
+  f64 cx = 0.0; f64 cy = 0.0;
+  glfwGetCursorPos(w, &cx, &cy);
+  if(!p->mouseLeftPressed &&
+     button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+    p->mouseLeftPressed = 1;
+    p->sceneDragActive = isInBounds(cx, cy, p->wim->sceneCoord);
+  }
+  if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+    p->mouseLeftPressed = 0;
+    p->sceneDragActive = 0;
+  }
+}
+
+void windowMousePosCallback(GLFWwindow *w, f64 xpos, f64 ypos)
+{
+  Platform *p = (Platform *) glfwGetWindowUserPointer(w);
+  p->sceneDragActive = p->sceneDragActive &&
+                       isInBounds(xpos, ypos, p->wim->sceneCoord);
+  if(p->lastMousePos[0] >= 0.0 &&
+     p->lastMousePos[1] >= 0.0 &&
+     p->sceneDragActive) {
+    f32 dx = (f32) p->lastMousePos[0] - xpos;
+    f32 dy = (f32) p->lastMousePos[1] - ypos;
+    updateDrag(p->wim, dx, dy);
+  }
+  p->lastMousePos[0] = xpos;
+  p->lastMousePos[1] = ypos;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +90,8 @@ void createWindow(Platform *platform)
   // Callbacks
   glfwSetFramebufferSizeCallback(platform->window, windowResizeCallback);
   glfwSetScrollCallback(platform->window, windowScrollCallback);
+  glfwSetMouseButtonCallback(platform->window, windowMouseButtonCallback);
+  glfwSetCursorPosCallback(platform->window, windowMousePosCallback);
   glfwMakeContextCurrent(platform->window);
   glfwSwapInterval(1);
 }
@@ -69,6 +101,10 @@ Platform *createPlatform(char *shaderDir)
   Platform *p = malloc(sizeof(Platform));
   p->winWidth = minWidth;
   p->winHeight = minHeight;
+  p->mouseLeftPressed = 0;
+  p->sceneDragActive = 0;
+  p->lastMousePos[0] = -1.0;
+  p->lastMousePos[1] = -1.0;
   createWindow(p);
   initGL();
   p->wim = createSceneWim(shaderDir);
