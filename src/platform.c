@@ -38,6 +38,7 @@ void windowScrollCallback(GLFWwindow *w, f64 xoffs, f64 yoffs)
   }
   f64 cx = 0.0; f64 cy = 0.0;
   glfwGetCursorPos(w, &cx, &cy);
+  updateScroll(p->wim, cx, cy, yoffs);
 }
 
 void windowMouseButtonCallback(GLFWwindow *w, i32 button, i32 action, i32 mods)

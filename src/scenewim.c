@@ -12,6 +12,7 @@ SceneWim *createSceneWim(char *shaderDir)
   setZeros(s->res, 2);
   setZeros(s->sceneCoord, 4);
   setZeros(s->scrollCenter, 2);
+  setZeros(s->scrollOffs, 2);
   setZeros(s->imgTexOffs, 2);
   initStandardShader(&s->imgShader, shaderDir, "mainImage");
   initStandardIBO(&s->imgIndices);
@@ -54,26 +55,47 @@ void updateSceneDimensions(SceneWim *s,
   calculateTexCoord(s);
 }
 
-void updateScrollLevel(SceneWim *s, f32 cx, f32 cy, f32 scrollOffs)
+void updateScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
 {
   if(s->imgTex == 0 || !isInBounds(cx, cy, s->sceneCoord)) {
     return;
   }
-  s->scrollLevel += scrollOffs;
-  s->scrollCenter[0] = cx - s->sceneCoord[0];
-  s->scrollCenter[1] = cy - s->sceneCoord[1];
+  f32 ocx = s->scrollCenter[0];
+  f32 ocy = s->scrollCenter[1];
+  // Reconstruct the transformation of the old zoom level
+  f32 zoom = 1.0 + 0.05 * s->scrollLevel;
+  f32 tx = ocx * (1.0 - zoom);
+  f32 ty = ocy * (1.0 - zoom);
+
+  // Calculate new scroll center
+  f32 scx = cx - s->sceneCoord[0];
+  f32 scy = cy - s->sceneCoord[1];
+  scaleToTex(s, &scx, &scy);
+  s->scrollCenter[0] = (scx + s->scrollOffs[0]) * zoom + tx;
+  s->scrollCenter[1] = (scy + s->scrollOffs[1]) * zoom + ty;
+
+  s->scrollOffs[0] = s->scrollCenter[0] - scx;
+  s->scrollOffs[1] = s->scrollCenter[1] - scy;
+  printf("%f %f :: %f %f\n", ocx - s->scrollCenter[0],
+                             ocy - s->scrollCenter[1],
+                             s->scrollOffs[0],
+                             s->scrollOffs[1]);
+
+  s->zoomCenter.vec[0] = s->scrollCenter[0] + s->imgTexOffs[0];
+  s->zoomCenter.vec[1] = s->scrollCenter[1] + s->imgTexOffs[1];
+  s->scrollLevel += scroll;
   calculateTexCoord(s);
 }
 
 void updateDrag(SceneWim *s, f32 dx, f32 dy)
 {
-  toTexCoords(s, &dx, &dy);
+  scaleToTex(s, &dx, &dy);
   s->imgTexOffs[0] += dx;
   s->imgTexOffs[1] += dy;
   calculateTexCoord(s);
 }
 
-void toTexCoords(SceneWim *s, f32 *cx, f32 *cy)
+void scaleToTex(SceneWim *s, f32 *cx, f32 *cy)
 {
   f32 texW = s->imgTex->imgWidth;
   f32 texH = s->imgTex->imgHeight;
@@ -105,8 +127,16 @@ void calculateTexCoord(SceneWim *s)
   f32 h = texH * yAsp * scaling;
   f32 x = s->imgTexOffs[0];
   f32 y = s->imgTexOffs[1];
-  updateTexCoordData(&s->imgTexCoord, x, y, w + x, h + y);
-  // Calculate "base coords"
+
+  f32 zoom = 1.0 + 0.05 * s->scrollLevel;
+  f32 tx = (s->scrollCenter[0] + x) * (1.0 - zoom);
+  f32 ty = (s->scrollCenter[1] + y) * (1.0 - zoom);
+
+  updateTexCoordData(&s->imgTexCoord,
+                     (x + s->scrollOffs[0]) * zoom + tx,
+                     (y + s->scrollOffs[1]) * zoom + ty,
+                     (w + x + s->scrollOffs[0]) * zoom + tx,
+                     (h + y + s->scrollOffs[1]) * zoom + ty);
 }
 
 void drawSceneWim(SceneWim *s)

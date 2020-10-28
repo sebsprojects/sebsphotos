@@ -16,7 +16,7 @@ void main()
   } else {
     fragColor = texture2D(tex, texCoord / texDim).xyz;
   }
-  if(length(texCoord - zoomCenter) < 50.0) {
+  if(length(texCoord - zoomCenter) < 20.0) {
     fragColor = vec3(1.0, 0.0, 0.0);
   }
   gl_FragColor = vec4(fragColor.xyz, 1.0);

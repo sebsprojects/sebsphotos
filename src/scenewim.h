@@ -18,8 +18,9 @@ struct SceneWim {
   f32 imgTexOffs[2];   // coords re to tex
   f32 res[2];
   f32 sceneCoord[4];
+  f32 scrollCenter[2];
+  f32 scrollOffs[2];
   f32 scrollLevel;
-  f32 scrollCenter[2]; // coords rel to tex
 };
 typedef struct SceneWim SceneWim;
 
@@ -32,12 +33,13 @@ void updateSceneDimensions(SceneWim *s, f32 w, f32 h, f32 x0, f32 y0,
                            f32 x1, f32 y1);
 
 
+void updateScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll);
 void updateDrag(SceneWim *s, f32 dx, f32 dy);
 
 void calculateTexCoord(SceneWim *s);
 
 void drawSceneWim(SceneWim *scene);
 
-void toTexCoords(SceneWim *s, f32 *cx, f32 *cy);
+void scaleToTex(SceneWim *s, f32 *cx, f32 *cy);
 
 #endif
