@@ -15,8 +15,6 @@ enum ShaderError {
 };
 
 struct ShaderProgram {
-  char *vertSrc;
-  char *fragSrc;
   GLuint vert;
   GLuint frag;
   GLuint prog;
@@ -26,7 +24,7 @@ typedef struct ShaderProgram ShaderProgram;
 
 void initStandardShader(ShaderProgram *p, char* shaderDir, char *shaderName);
 
-void compileAndLinkShader(ShaderProgram *p);
+void compileAndLinkShader(ShaderProgram *p, char *vertSrc, char *fragSrc);
 
 char *allocFileContent(char *path);
 char *allocFullShaderPath(char *baseDir, char *fileName, char *ext);

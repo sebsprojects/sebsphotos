@@ -9,27 +9,32 @@ SceneWim *createSceneWim(char *shaderDir)
   SceneWim *s = malloc(sizeof(SceneWim));
   s->imgTex = 0;
   s->scrollLevel = 0;
+  s->activeTool = TOOL_NAV;
   setZeros(s->res, 2);
   setZeros(s->sceneCoord, 4);
   setZeros(s->scrollCenter, 2);
   setZeros(s->scrollOffs, 2);
   setZeros(s->imgTexOffs, 2);
+  s->selCoord[0] = 0.0; s->selCoord[1] = 0.0;
+  s->selCoord[2] = 1200; s->selCoord[3] = 900;
   initStandardShader(&s->imgShader, shaderDir, "mainImage");
-  initStandardIBO(&s->imgIndices);
+  initStandardShader(&s->selShader, shaderDir, "select");
+  initStandardIBO(&s->indices);
   initStandardGeom(&s->imgGeom, &s->imgShader, "in_position");
+  initStandardGeom(&s->selGeom, &s->selShader, "in_position");
   initStandardTexCoord(&s->imgTexCoord, &s->imgShader, "in_texcoord");
   initStandardUniformf(&s->imgTexDim, 2, &s->imgShader, "texDim");
   initStandardUniformf(&s->zoomCenter, 2, &s->imgShader, "zoomCenter");
+  initStandardUniformf(&s->selInnerCoord, 4, &s->selShader, "selInnerCoord");
   return s;
 }
 
 void destroySceneWim(SceneWim *s)
 {
-  if(s->imgShader.vertSrc != 0) { free(s->imgShader.vertSrc); }
-  if(s->imgShader.fragSrc != 0) { free(s->imgShader.fragSrc); }
   if(s->imgGeom.data != 0) { free(s->imgGeom.data); }
+  if(s->selGeom.data != 0) { free(s->selGeom.data); }
   if(s->imgTexCoord.data != 0) { free(s->imgTexCoord.data); }
-  if(s->imgIndices.data != 0) { free(s->imgIndices.data); }
+  if(s->indices.data != 0) { free(s->indices.data); }
   free(s);
 }
 
@@ -48,6 +53,10 @@ void updateSceneDimensions(SceneWim *s,
   s->res[0] = w; s->res[1] = h;
   s->sceneCoord[0] = x0; s->sceneCoord[1] = y0;
   s->sceneCoord[2] = x1; s->sceneCoord[3] = y1;
+  updateGeomData(&s->selGeom, (2 * s->selCoord[0] / w) - 1.0,
+                              (2 * s->selCoord[1] / h) - 1.0,
+                              (2 * s->selCoord[2] / w) - 1.0,
+                              (2 * s->selCoord[3] / h) - 1.0);
   updateGeomData(&s->imgGeom, (2 * x0 / w) - 1.0,
                               (2 * y0 / h) - 1.0,
                               (2 * x1 / w) - 1.0,
@@ -57,13 +66,15 @@ void updateSceneDimensions(SceneWim *s,
 
 void updateScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
 {
-  if(s->imgTex == 0 || !isInBounds(cx, cy, s->sceneCoord)) {
+  if(s->imgTex == 0 ||
+     !isInBounds(cx, cy, s->sceneCoord) ||
+     s->activeTool != TOOL_NAV) {
     return;
   }
   f32 ocx = s->scrollCenter[0];
   f32 ocy = s->scrollCenter[1];
   // Reconstruct the transformation of the old zoom level
-  f32 zoom = 1.0 + 0.05 * s->scrollLevel;
+  f32 zoom = getScrollScaling(s);
   f32 tx = ocx * (1.0 - zoom);
   f32 ty = ocy * (1.0 - zoom);
 
@@ -76,10 +87,8 @@ void updateScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
 
   s->scrollOffs[0] = s->scrollCenter[0] - scx;
   s->scrollOffs[1] = s->scrollCenter[1] - scy;
-  printf("%f %f :: %f %f\n", ocx - s->scrollCenter[0],
-                             ocy - s->scrollCenter[1],
-                             s->scrollOffs[0],
-                             s->scrollOffs[1]);
+  //printf("%f %f :: %f %f\n",ocx - s->scrollCenter[0],ocy - s->scrollCenter[1],
+  //                           s->scrollOffs[0], s->scrollOffs[1]);
 
   s->zoomCenter.vec[0] = s->scrollCenter[0] + s->imgTexOffs[0];
   s->zoomCenter.vec[1] = s->scrollCenter[1] + s->imgTexOffs[1];
@@ -89,10 +98,18 @@ void updateScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
 
 void updateDrag(SceneWim *s, f32 dx, f32 dy)
 {
+  if(s->imgTex == 0 || s->activeTool != TOOL_NAV) {
+    return;
+  }
   scaleToTex(s, &dx, &dy);
-  s->imgTexOffs[0] += dx;
-  s->imgTexOffs[1] += dy;
+  s->imgTexOffs[0] += dx * getScrollScaling(s);
+  s->imgTexOffs[1] += dy * getScrollScaling(s);
   calculateTexCoord(s);
+}
+
+void setActiveTool(SceneWim *s, enum Tool t)
+{
+  s->activeTool = t;
 }
 
 void scaleToTex(SceneWim *s, f32 *cx, f32 *cy)
@@ -106,6 +123,11 @@ void scaleToTex(SceneWim *s, f32 *cx, f32 *cy)
   f32 scaling = (xAsp >= yAsp ? yAsp : xAsp);
   *cx = *cx / scaling;
   *cy = *cy / scaling;
+}
+
+f32 getScrollScaling(SceneWim *s)
+{
+  return 1.0 + 0.05 * s->scrollLevel;
 }
 
 /*
@@ -125,24 +147,51 @@ void calculateTexCoord(SceneWim *s)
   f32 scaling = 1.0 / (xAsp >= yAsp ? yAsp : xAsp);
   f32 w = texW * xAsp * scaling;
   f32 h = texH * yAsp * scaling;
-  f32 x = s->imgTexOffs[0];
-  f32 y = s->imgTexOffs[1];
+  f32 texOffsX = s->imgTexOffs[0];
+  f32 texOffsY = s->imgTexOffs[1];
+  f32 offsX = texOffsX + s->scrollOffs[0];
+  f32 offsY = texOffsY + s->scrollOffs[1];
 
-  f32 zoom = 1.0 + 0.05 * s->scrollLevel;
-  f32 tx = (s->scrollCenter[0] + x) * (1.0 - zoom);
-  f32 ty = (s->scrollCenter[1] + y) * (1.0 - zoom);
+  f32 zoom = getScrollScaling(s);
+  f32 tx = (s->scrollCenter[0] + texOffsX) * (1.0 - zoom);
+  f32 ty = (s->scrollCenter[1] + texOffsY) * (1.0 - zoom);
 
   updateTexCoordData(&s->imgTexCoord,
-                     (x + s->scrollOffs[0]) * zoom + tx,
-                     (y + s->scrollOffs[1]) * zoom + ty,
-                     (w + x + s->scrollOffs[0]) * zoom + tx,
-                     (h + y + s->scrollOffs[1]) * zoom + ty);
+                     offsX * zoom + tx,
+                     offsY * zoom + ty,
+                     (offsX + w) * zoom + tx,
+                     (offsY + h) * zoom + ty);
 }
 
 void drawSceneWim(SceneWim *s)
 {
+  drawMainImage(s);
+  if(s->activeTool == TOOL_SELECT) { drawSelect(s); }
+}
+
+void drawSelect(SceneWim *s)
+{
+  updateVBO(&s->selGeom);
+
+  glUseProgram(s->selShader.prog);
+  glBindBuffer(GL_ARRAY_BUFFER, s->selGeom.id);
+  glVertexAttribPointer(s->selGeom.loc, 4, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(s->selGeom.loc);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s->indices.id);
+  glDrawElements(GL_TRIANGLES, s->indices.count, GL_UNSIGNED_SHORT, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+  glDisableVertexAttribArray(s->selGeom.loc);
+  glUseProgram(0);
+}
+
+void drawMainImage(SceneWim *s)
+{
   updateVBO(&s->imgGeom);
   updateVBO(&s->imgTexCoord);
+
   glUseProgram(s->imgShader.prog);
   glBindBuffer(GL_ARRAY_BUFFER, s->imgGeom.id);
   glVertexAttribPointer(s->imgGeom.loc, 4, GL_FLOAT, GL_FALSE, 0, 0);
@@ -160,8 +209,8 @@ void drawSceneWim(SceneWim *s)
   }
   loadUniformf(&s->zoomCenter);
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s->imgIndices.id);
-  glDrawElements(GL_TRIANGLES, s->imgIndices.count, GL_UNSIGNED_SHORT, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s->indices.id);
+  glDrawElements(GL_TRIANGLES, s->indices.count, GL_UNSIGNED_SHORT, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
   glDisableVertexAttribArray(s->imgTexCoord.loc);

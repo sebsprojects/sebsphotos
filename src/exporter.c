@@ -35,8 +35,6 @@ Exporter *createExporter(char *shaderDir)
 
 void destroyExporter(Exporter *e)
 {
-  if(e->exportShader.vertSrc != 0) { free(e->exportShader.vertSrc); }
-  if(e->exportShader.fragSrc != 0) { free(e->exportShader.fragSrc); }
   if(e->geom.data != 0) { free(e->geom.data); }
   if(e->texCoord.data != 0) { free(e->texCoord.data); }
   if(e->indices.data != 0) { free(e->indices.data); }

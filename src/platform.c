@@ -73,6 +73,17 @@ void windowMousePosCallback(GLFWwindow *w, f64 xpos, f64 ypos)
   p->lastMousePos[1] = ypos;
 }
 
+void windowKeyCallback(GLFWwindow *w, i32 key, i32 scode, i32 action, i32 mods)
+{
+  Platform *p = (Platform *) glfwGetWindowUserPointer(w);
+  if(key == GLFW_KEY_1) {
+    setActiveTool(p->wim, TOOL_NAV);
+  }
+  if(key == GLFW_KEY_2) {
+    setActiveTool(p->wim, TOOL_SELECT);
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 void createWindow(Platform *platform)
@@ -93,6 +104,7 @@ void createWindow(Platform *platform)
   glfwSetScrollCallback(platform->window, windowScrollCallback);
   glfwSetMouseButtonCallback(platform->window, windowMouseButtonCallback);
   glfwSetCursorPosCallback(platform->window, windowMousePosCallback);
+  glfwSetKeyCallback(platform->window, windowKeyCallback);
   glfwMakeContextCurrent(platform->window);
   glfwSwapInterval(1);
 }
@@ -123,6 +135,8 @@ void destroyPlatform(Platform *p)
 void initGL()
 {
   glClearColor(0.0, 0.0, 0.0, 1.0);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void updateViewport(Platform *p)

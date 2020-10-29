@@ -4,31 +4,32 @@
 
 #include "shader.h"
 
-
 void initStandardShader(ShaderProgram *p, char* shaderDir, char *shaderName)
 {
   p->vert = 0; p->frag = 0; p-> prog = 0;
   p->error = SHADER_NOERROR;
   char *vertPath = allocFullShaderPath(shaderDir, shaderName, "vert");
   char *fragPath = allocFullShaderPath(shaderDir, shaderName, "frag");
-  p->vertSrc = allocFileContent(vertPath);
-  p->fragSrc = allocFileContent(fragPath);
+  char *vertSrc = allocFileContent(vertPath);
+  char *fragSrc = allocFileContent(fragPath);
   free(fragPath);
   free(vertPath);
   if(p->error != SHADER_NOERROR) {
     printf("Error with code %i\n", p->error);
     //TODO: ERROR
   }
-  compileAndLinkShader(p);
+  compileAndLinkShader(p, vertSrc, fragSrc);
+  free(vertSrc);
+  free(fragSrc);
 }
 
-void compileAndLinkShader(ShaderProgram *p)
+void compileAndLinkShader(ShaderProgram *p, char *vertSrc, char *fragSrc)
 {
-  const GLchar *vertSrc = p->vertSrc;
-  const GLchar *fragSrc = p->fragSrc;
+  const GLchar *vs = vertSrc;
+  const GLchar *fs = fragSrc;
   GLint success = 0;
   p->vert = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(p->vert, 1, &vertSrc, 0);
+  glShaderSource(p->vert, 1, &vs, 0);
   glCompileShader(p->vert);
   glGetShaderiv(p->vert, GL_COMPILE_STATUS, &success);
   if(success == GL_FALSE) {
@@ -43,7 +44,7 @@ void compileAndLinkShader(ShaderProgram *p)
     return;
   }
   p->frag = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(p->frag, 1, &fragSrc, 0);
+  glShaderSource(p->frag, 1, &fs, 0);
   glCompileShader(p->frag);
   glGetShaderiv(p->frag, GL_COMPILE_STATUS, &success);
   if(success == GL_FALSE) {

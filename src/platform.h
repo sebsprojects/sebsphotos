@@ -16,6 +16,7 @@ struct Platform {
   f64 lastMousePos[2];
   bool mouseLeftPressed;
   bool sceneDragActive;
+
 };
 typedef struct Platform Platform;
 
