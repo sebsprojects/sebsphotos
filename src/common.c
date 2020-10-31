@@ -88,6 +88,7 @@ void initStandardUniformf(Uniformf *u, u32 dim, ShaderProgram* p, char *un)
   setZeros(u->vec, 4);
   if(p != 0) {
     u->loc = glGetUniformLocation(p->prog, un);
+    printf("p=%u name=%s loc=%i\n", p, un, u->loc);
   }
 }
 

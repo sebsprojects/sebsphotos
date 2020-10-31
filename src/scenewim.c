@@ -30,7 +30,8 @@ SceneWim *createSceneWim(char *shaderDir)
   initStandardTexCoord(&s->imgTexCoord, &s->imgShader, "in_texcoord");
   initStandardUniformf(&s->imgTexDim, 2, &s->imgShader, "texDim");
   initStandardUniformf(&s->zoomCenter, 2, &s->imgShader, "zoomCenter");
-  initStandardUniformf(&s->selInnerCoord, 4, &s->selShader, "selInnerCoord");
+  initStandardUniformf(&s->selCoordUni, 4, &s->selShader, "selCoord");
+  initStandardUniformf(&s->selRes, 2, &s->selShader, "selRes");
   return s;
 }
 
@@ -60,13 +61,12 @@ void handleMouseRelease(SceneWim *s)
 
 void handleMouseScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
 {
-  if(isInBounds(cx, cy, s->sceneCoord)) {
-    if(s->activeTool == TOOL_NAV) {
+  if(isInBounds(cx, cy, s->sceneCoord) && s->activeTool == TOOL_NAV) {
       updateImgScroll(s, cx, cy, scroll);
-    }
-    if(s->activeTool == TOOL_SEL) {
-      updateSelScroll(s, cx, cy, scroll);
-    }
+  }
+  //if(isInSelBounds(s, cx, cy) && s->activeTool == TOOL_SEL) {
+  if(isInBounds(cx, cy, s->sceneCoord) && s->activeTool == TOOL_SEL) {
+    updateSelScroll(s, cx, cy, scroll);
   }
 }
 
@@ -91,6 +91,8 @@ void updateImgTex(SceneWim *s, Texture *tex)
   s->imgTexDim.vec[0] = tex->texWidth;
   s->imgTexDim.vec[1] = tex->texHeight;
   s->selSize = 300.0;
+  s->selOffs[0] = 0.5 * s->selSize * s->selAspect[0];
+  s->selOffs[1] = 0.5 * s->selSize * s->selAspect[1];
   calculateTexCoord(s);
   calculateSelCoord(s);
 }
@@ -99,13 +101,14 @@ void updateSceneDimensions(SceneWim *s,
                            f32 w, f32 h, f32 x0, f32 y0, f32 x1, f32 y1)
 {
   s->res[0] = w; s->res[1] = h;
+  s->selRes.vec[0] = w; s->selRes.vec[1] = h;
   s->sceneCoord[0] = x0; s->sceneCoord[1] = y0;
   s->sceneCoord[2] = x1; s->sceneCoord[3] = y1;
   updateGeomData(&s->imgGeom, 1, x0 / w,
                                  y0 / h,
                                  x1 / w,
                                  y1 / h);
-  //scaleToFit(s);
+  scaleToFit(s);
   calculateTexCoord(s);
   calculateSelCoord(s);
 }
@@ -152,8 +155,10 @@ void updateImgDrag(SceneWim *s, f32 dx, f32 dy)
   calculateSelCoord(s);
 }
 
-void updateSelScroll(SceneWim *S, f32 cx, f32 cy, f32 scroll)
+void updateSelScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
 {
+  s->selSize += 100 * scroll;
+  calculateSelCoord(s);
 }
 
 void updateSelDrag(SceneWim *s, f32 dx, f32 dy)
@@ -240,11 +245,11 @@ void calculateSelCoord(SceneWim *s)
   f32 zoom = 1.0 / scrollToScale(s->scrollLevel);
   f32 x = s->selOffs[0];
   f32 y = s->selOffs[1];
-  f32 w = s->selAspect[0] * s->selSize;
-  f32 h = s->selAspect[1] * s->selSize;
+  f32 w = 0.5 * (s->selAspect[0] * s->selSize);
+  f32 h = 0.5 * (s->selAspect[1] * s->selSize);
 
-  f32 x0 = zoom * (x - s->scrollT[0]) - s->scrollOffs[0] - s->imgTexOffs[0];
-  f32 y0 = zoom * (y - s->scrollT[1]) - s->scrollOffs[1] - s->imgTexOffs[1];
+  f32 x0 = zoom * (x - w - s->scrollT[0]) - s->scrollOffs[0] - s->imgTexOffs[0];
+  f32 y0 = zoom * (y - h - s->scrollT[1]) - s->scrollOffs[1] - s->imgTexOffs[1];
   f32 x1 = zoom * (x + w - s->scrollT[0]) - s->scrollOffs[0] - s->imgTexOffs[0];
   f32 y1 = zoom * (y + h - s->scrollT[1]) - s->scrollOffs[1] - s->imgTexOffs[1];
 
@@ -252,12 +257,16 @@ void calculateSelCoord(SceneWim *s)
   s->selCoord[1] = y0;
   s->selCoord[2] = x1;
   s->selCoord[3] = y1;
+  s->selCoordUni.vec[0] = x0 + sx;
+  s->selCoordUni.vec[1] = sh - y0 + sy;
+  s->selCoordUni.vec[2] = x1 + sx;
+  s->selCoordUni.vec[3] = sh - y1 + sy;
   clipToScene(s, &x0, &y0, &x1, &y1);
 
-  printf("%f %f %f %f\n", x0, y0, x1, y1);
-
-  updateGeomData(&s->selGeom, 1, (x0 + sx) / s->res[0], (sh - y0 + sy) / s->res[1],
-                                 (x1 + sx) / s->res[0], (sh - y1 + sy) / s->res[1]);
+  updateGeomData(&s->selGeom, 1, (x0 + sx) / s->res[0],
+                                 (sh - y0 + sy) / s->res[1],
+                                 (x1 + sx) / s->res[0],
+                                 (sh - y1 + sy) / s->res[1]);
 }
 
 
@@ -276,6 +285,9 @@ void drawSelect(SceneWim *s)
   glVertexAttribPointer(s->selGeom.loc, 4, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(s->selGeom.loc);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  loadUniformf(&s->selCoordUni);
+  loadUniformf(&s->selRes);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s->indices.id);
   glDrawElements(GL_TRIANGLES, s->indices.count, GL_UNSIGNED_SHORT, 0);

@@ -1,2 +1,24 @@
+WORKSPACE
+- position initial select
+- reset zoom / offs
+- reset select
+
+- select shader
+- blend-out out-of-select
 - make sure the initial resize event happens after SceneWim initialization
+
+EXPORT
+
+INFO PANEL
+- text rendering
+
+FILE PANEL
+
+GENERAL
+- workspace outer box
+- workinfo outer box
+
+MISC
 - user GLFW timing library instead of time.h
+- opengl destuction
+
