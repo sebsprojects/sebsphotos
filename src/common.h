@@ -56,11 +56,19 @@ void initStandardUniformf(Uniformf *u, u32 dim, struct ShaderProgram* p,
                           char *un);
 
 void loadUniformf(Uniformf *u);
-void updateGeomData(VBO *vbo, f32 x0, f32 y0, f32 x1, f32 y1);
+void updateGeomData(VBO *vbo, bool norm, f32 x0, f32 y0, f32 x1, f32 y1);
 void updateTexCoordData(VBO *vbo, f32 u0, f32 v0, f32 u1, f32 v1);
 void updateVBO(VBO *vbo);
 
 bool isInBounds(f32 x, f32 y, f32 *dims);
+void toClipSpace(f32 *array, u32 len);
 void setZeros(f32 *array, u32 len);
+
+inline f32 minf(f32 a, f32 b) {
+  return a < b ? a : b;
+}
+inline f32 maxf(f32 a, f32 b) {
+  return a > b ? a : b;
+}
 
 #endif

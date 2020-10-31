@@ -10,13 +10,18 @@ SceneWim *createSceneWim(char *shaderDir)
   s->imgTex = 0;
   s->scrollLevel = 0;
   s->activeTool = TOOL_NAV;
+  s->dragActive = 0;
   setZeros(s->res, 2);
   setZeros(s->sceneCoord, 4);
   setZeros(s->scrollCenter, 2);
   setZeros(s->scrollOffs, 2);
+  setZeros(s->scrollT, 2);
   setZeros(s->imgTexOffs, 2);
-  s->selCoord[0] = 0.0; s->selCoord[1] = 0.0;
-  s->selCoord[2] = 1200; s->selCoord[3] = 900;
+  setZeros(s->selOffs, 2);
+  setZeros(s->selCoord, 4);
+  s->selAspect[0] = 3.0;
+  s->selAspect[1] = 2.0;
+  s->selSize = 0.0;
   initStandardShader(&s->imgShader, shaderDir, "mainImage");
   initStandardShader(&s->selShader, shaderDir, "select");
   initStandardIBO(&s->indices);
@@ -38,13 +43,56 @@ void destroySceneWim(SceneWim *s)
   free(s);
 }
 
+void handleMousePress(SceneWim *s, f32 cx, f32 cy)
+{
+  if(s->activeTool == TOOL_NAV) {
+    s->dragActive = isInBounds(cx, cy, s->sceneCoord) && !s->dragActive;
+  }
+  if(s->activeTool == TOOL_SEL) {
+    s->dragActive = isInSelBounds(s, cx, cy) && !s->dragActive;
+  }
+}
+
+void handleMouseRelease(SceneWim *s)
+{
+  s->dragActive = 0;
+}
+
+void handleMouseScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
+{
+  if(isInBounds(cx, cy, s->sceneCoord)) {
+    if(s->activeTool == TOOL_NAV) {
+      updateImgScroll(s, cx, cy, scroll);
+    }
+    if(s->activeTool == TOOL_SEL) {
+      updateSelScroll(s, cx, cy, scroll);
+    }
+  }
+}
+
+void handleMouseMove(SceneWim *s, f32 cx, f32 cy, f32 dx, f32 dy)
+{
+  if(isInBounds(cx, cy, s->sceneCoord)) {
+    if(s->dragActive && s->activeTool == TOOL_NAV) {
+      updateImgDrag(s, dx, dy);
+    }
+    if(s->dragActive && s->activeTool == TOOL_SEL) {
+      updateSelDrag(s, dx, dy);
+    }
+  } else {
+    s->dragActive = 0;
+  }
+}
+
 void updateImgTex(SceneWim *s, Texture *tex)
 {
   s->imgTex = tex;
   s->imgTex->samplerLoc = glGetUniformLocation(s->imgShader.prog, "tex");
   s->imgTexDim.vec[0] = tex->texWidth;
   s->imgTexDim.vec[1] = tex->texHeight;
+  s->selSize = 300.0;
   calculateTexCoord(s);
+  calculateSelCoord(s);
 }
 
 void updateSceneDimensions(SceneWim *s,
@@ -53,18 +101,16 @@ void updateSceneDimensions(SceneWim *s,
   s->res[0] = w; s->res[1] = h;
   s->sceneCoord[0] = x0; s->sceneCoord[1] = y0;
   s->sceneCoord[2] = x1; s->sceneCoord[3] = y1;
-  updateGeomData(&s->selGeom, (2 * s->selCoord[0] / w) - 1.0,
-                              (2 * s->selCoord[1] / h) - 1.0,
-                              (2 * s->selCoord[2] / w) - 1.0,
-                              (2 * s->selCoord[3] / h) - 1.0);
-  updateGeomData(&s->imgGeom, (2 * x0 / w) - 1.0,
-                              (2 * y0 / h) - 1.0,
-                              (2 * x1 / w) - 1.0,
-                              (2 * y1 / h) - 1.0);
+  updateGeomData(&s->imgGeom, 1, x0 / w,
+                                 y0 / h,
+                                 x1 / w,
+                                 y1 / h);
+  //scaleToFit(s);
   calculateTexCoord(s);
+  calculateSelCoord(s);
 }
 
-void updateScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
+void updateImgScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
 {
   if(s->imgTex == 0 ||
      !isInBounds(cx, cy, s->sceneCoord) ||
@@ -74,14 +120,14 @@ void updateScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
   f32 ocx = s->scrollCenter[0];
   f32 ocy = s->scrollCenter[1];
   // Reconstruct the transformation of the old zoom level
-  f32 zoom = getScrollScaling(s);
+  f32 zoom = scrollToScale(s->scrollLevel);
   f32 tx = ocx * (1.0 - zoom);
   f32 ty = ocy * (1.0 - zoom);
 
   // Calculate new scroll center
   f32 scx = cx - s->sceneCoord[0];
   f32 scy = cy - s->sceneCoord[1];
-  scaleToTex(s, &scx, &scy);
+
   s->scrollCenter[0] = (scx + s->scrollOffs[0]) * zoom + tx;
   s->scrollCenter[1] = (scy + s->scrollOffs[1]) * zoom + ty;
 
@@ -92,27 +138,38 @@ void updateScroll(SceneWim *s, f32 cx, f32 cy, f32 scroll)
 
   s->zoomCenter.vec[0] = s->scrollCenter[0] + s->imgTexOffs[0];
   s->zoomCenter.vec[1] = s->scrollCenter[1] + s->imgTexOffs[1];
-  s->scrollLevel += scroll;
+  s->scrollLevel -= scroll;
   calculateTexCoord(s);
+  calculateSelCoord(s);
 }
 
-void updateDrag(SceneWim *s, f32 dx, f32 dy)
+void updateImgDrag(SceneWim *s, f32 dx, f32 dy)
 {
-  if(s->imgTex == 0 || s->activeTool != TOOL_NAV) {
-    return;
-  }
-  scaleToTex(s, &dx, &dy);
-  s->imgTexOffs[0] += dx * getScrollScaling(s);
-  s->imgTexOffs[1] += dy * getScrollScaling(s);
+  if(s->imgTex == 0) { return; }
+  s->imgTexOffs[0] += dx * scrollToScale(s->scrollLevel);
+  s->imgTexOffs[1] += dy * scrollToScale(s->scrollLevel);
   calculateTexCoord(s);
+  calculateSelCoord(s);
+}
+
+void updateSelScroll(SceneWim *S, f32 cx, f32 cy, f32 scroll)
+{
+}
+
+void updateSelDrag(SceneWim *s, f32 dx, f32 dy)
+{
+  s->selOffs[0] -= dx * scrollToScale(s->scrollLevel);
+  s->selOffs[1] -= dy * scrollToScale(s->scrollLevel);
+  calculateSelCoord(s);
 }
 
 void setActiveTool(SceneWim *s, enum Tool t)
 {
   s->activeTool = t;
+  s->dragActive = 0;
 }
 
-void scaleToTex(SceneWim *s, f32 *cx, f32 *cy)
+void scaleToFit(SceneWim *s)
 {
   f32 texW = s->imgTex->imgWidth;
   f32 texH = s->imgTex->imgHeight;
@@ -120,42 +177,43 @@ void scaleToTex(SceneWim *s, f32 *cx, f32 *cy)
   f32 sceH = s->sceneCoord[3] - s->sceneCoord[1];
   f32 xAsp = sceW / texW;
   f32 yAsp = sceH / texH;
-  f32 scaling = (xAsp >= yAsp ? yAsp : xAsp);
-  *cx = *cx / scaling;
-  *cy = *cy / scaling;
+  f32 scale = 1.0 / (xAsp >= yAsp ? yAsp : xAsp);
+  s->scrollLevel = scaleToScroll(scale);
+  calculateTexCoord(s);
 }
 
-f32 getScrollScaling(SceneWim *s)
+bool isInSelBounds(SceneWim *s, f32 cx, f32 cy)
 {
-  return 1.0 + 0.05 * s->scrollLevel;
+  cx -= s->sceneCoord[0];
+  cy -= s->sceneCoord[1];
+  return isInBounds(cx, cy, s->selCoord);
 }
 
-/*
- * Depends on
- * sceneCoord
- * scrollLevel / scrollCenter
- */
+f32 scrollToScale(f32 scroll)
+{
+  return 1.0 + 0.05 * scroll;
+}
+
+f32 scaleToScroll(f32 scale)
+{
+  return (scale - 1.0) * 20.0;
+}
+
 void calculateTexCoord(SceneWim *s)
 {
-  f32 texW = s->imgTex->imgWidth;
-  f32 texH = s->imgTex->imgHeight;
-  f32 sceW = s->sceneCoord[2] - s->sceneCoord[0];
-  f32 sceH = s->sceneCoord[3] - s->sceneCoord[1];
-
-  f32 xAsp = sceW / texW;
-  f32 yAsp = sceH / texH;
-  f32 scaling = 1.0 / (xAsp >= yAsp ? yAsp : xAsp);
-  f32 w = texW * xAsp * scaling;
-  f32 h = texH * yAsp * scaling;
+  f32 w = s->sceneCoord[2] - s->sceneCoord[0];
+  f32 h = s->sceneCoord[3] - s->sceneCoord[1];
   f32 texOffsX = s->imgTexOffs[0];
   f32 texOffsY = s->imgTexOffs[1];
   f32 offsX = texOffsX + s->scrollOffs[0];
   f32 offsY = texOffsY + s->scrollOffs[1];
 
-  f32 zoom = getScrollScaling(s);
+  f32 zoom = scrollToScale(s->scrollLevel);
   f32 tx = (s->scrollCenter[0] + texOffsX) * (1.0 - zoom);
   f32 ty = (s->scrollCenter[1] + texOffsY) * (1.0 - zoom);
 
+  s->scrollT[0] = tx;
+  s->scrollT[1] = ty;
   updateTexCoordData(&s->imgTexCoord,
                      offsX * zoom + tx,
                      offsY * zoom + ty,
@@ -163,10 +221,50 @@ void calculateTexCoord(SceneWim *s)
                      (offsY + h) * zoom + ty);
 }
 
+void clipToScene(SceneWim *s, f32 *x0, f32 *y0, f32 *x1, f32 *y1)
+{
+  f32 w = s->sceneCoord[2] - s->sceneCoord[0];
+  f32 h = s->sceneCoord[3] - s->sceneCoord[1];
+  *x0 = maxf(0, *x0);
+  *y0 = maxf(0, *y0);
+  *x1 = minf(w, *x1);
+  *y1 = minf(h, *y1);
+}
+
+void calculateSelCoord(SceneWim *s)
+{
+  f32 sx = s->sceneCoord[0];
+  f32 sy = s->sceneCoord[1];
+  f32 sh = s->sceneCoord[3] - sy;
+
+  f32 zoom = 1.0 / scrollToScale(s->scrollLevel);
+  f32 x = s->selOffs[0];
+  f32 y = s->selOffs[1];
+  f32 w = s->selAspect[0] * s->selSize;
+  f32 h = s->selAspect[1] * s->selSize;
+
+  f32 x0 = zoom * (x - s->scrollT[0]) - s->scrollOffs[0] - s->imgTexOffs[0];
+  f32 y0 = zoom * (y - s->scrollT[1]) - s->scrollOffs[1] - s->imgTexOffs[1];
+  f32 x1 = zoom * (x + w - s->scrollT[0]) - s->scrollOffs[0] - s->imgTexOffs[0];
+  f32 y1 = zoom * (y + h - s->scrollT[1]) - s->scrollOffs[1] - s->imgTexOffs[1];
+
+  s->selCoord[0] = x0;
+  s->selCoord[1] = y0;
+  s->selCoord[2] = x1;
+  s->selCoord[3] = y1;
+  clipToScene(s, &x0, &y0, &x1, &y1);
+
+  printf("%f %f %f %f\n", x0, y0, x1, y1);
+
+  updateGeomData(&s->selGeom, 1, (x0 + sx) / s->res[0], (sh - y0 + sy) / s->res[1],
+                                 (x1 + sx) / s->res[0], (sh - y1 + sy) / s->res[1]);
+}
+
+
 void drawSceneWim(SceneWim *s)
 {
   drawMainImage(s);
-  if(s->activeTool == TOOL_SELECT) { drawSelect(s); }
+  drawSelect(s);
 }
 
 void drawSelect(SceneWim *s)

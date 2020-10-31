@@ -91,12 +91,13 @@ void initStandardUniformf(Uniformf *u, u32 dim, ShaderProgram* p, char *un)
   }
 }
 
-void updateGeomData(VBO *vbo, f32 x0, f32 y0, f32 x1, f32 y1)
+void updateGeomData(VBO *vbo, bool norm, f32 x0, f32 y0, f32 x1, f32 y1)
 {
   vbo->data[0]  = x0; vbo->data[1]  = y1; // upper left
   vbo->data[4]  = x1; vbo->data[5]  = y1; // upper right
   vbo->data[8]  = x1; vbo->data[9]  = y0; // lower right
   vbo->data[12] = x0; vbo->data[13] = y0; // lower left
+  if(norm) { toClipSpace(vbo->data, 16); }
   vbo->isModified = 1;
 }
 
@@ -124,6 +125,15 @@ void updateVBO(VBO *vbo)
 bool isInBounds(f32 x, f32 y, f32 *dims)
 {
   return x >= dims[0] && y >= dims[1] && x <= dims[2] && y <= dims[3];
+}
+
+void toClipSpace(f32 *array, u32 len)
+{
+  for(u32 i = 0; i < len; i++) {
+    if(i % 4 <= 1) {
+      array[i] = array[i] * 2.0 - 1.0;
+    }
+  }
 }
 
 void setZeros(f32 *array, u32 len)

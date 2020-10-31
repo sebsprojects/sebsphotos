@@ -29,7 +29,7 @@ Exporter *createExporter(char *shaderDir)
   initStandardGeom(&e->geom, &e->exportShader, "in_position");
   initStandardTexCoord(&e->texCoord, &e->exportShader, "in_texcoord");
   initStandardUniformf(&e->texDim, 2, &e->exportShader, "texDim");
-  updateGeomData(&e->geom, -1.0, -1.0, 1.0, 1.0);
+  updateGeomData(&e->geom, 0, -1.0, -1.0, 1.0, 1.0);
   return e;
 }
 

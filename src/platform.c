@@ -33,12 +33,9 @@ void windowResizeCallback(GLFWwindow *w, i32 newWidth, i32 newHeight)
 void windowScrollCallback(GLFWwindow *w, f64 xoffs, f64 yoffs)
 {
   Platform *p = (Platform *) glfwGetWindowUserPointer(w);
-  if(p == 0) {
-    printf("GLFW User Pointer is NULL\n");
-  }
   f64 cx = 0.0; f64 cy = 0.0;
   glfwGetCursorPos(w, &cx, &cy);
-  updateScroll(p->wim, cx, cy, yoffs);
+  handleMouseScroll(p->wim, cx, cy, yoffs);
 }
 
 void windowMouseButtonCallback(GLFWwindow *w, i32 button, i32 action, i32 mods)
@@ -46,28 +43,21 @@ void windowMouseButtonCallback(GLFWwindow *w, i32 button, i32 action, i32 mods)
   Platform *p = (Platform *) glfwGetWindowUserPointer(w);
   f64 cx = 0.0; f64 cy = 0.0;
   glfwGetCursorPos(w, &cx, &cy);
-  if(!p->mouseLeftPressed &&
-     button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-    p->mouseLeftPressed = 1;
-    p->sceneDragActive = isInBounds(cx, cy, p->wim->sceneCoord);
+  if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+    handleMousePress(p->wim, cx, cy);
   }
   if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-    p->mouseLeftPressed = 0;
-    p->sceneDragActive = 0;
+    handleMouseRelease(p->wim);
   }
 }
 
 void windowMousePosCallback(GLFWwindow *w, f64 xpos, f64 ypos)
 {
   Platform *p = (Platform *) glfwGetWindowUserPointer(w);
-  p->sceneDragActive = p->sceneDragActive &&
-                       isInBounds(xpos, ypos, p->wim->sceneCoord);
-  if(p->lastMousePos[0] >= 0.0 &&
-     p->lastMousePos[1] >= 0.0 &&
-     p->sceneDragActive) {
+  if(p->lastMousePos[0] >= 0.0 && p->lastMousePos[1] >= 0.0) {
     f32 dx = (f32) p->lastMousePos[0] - xpos;
     f32 dy = (f32) p->lastMousePos[1] - ypos;
-    updateDrag(p->wim, dx, dy);
+    handleMouseMove(p->wim, (f32) xpos, (f32) ypos, dx, dy);
   }
   p->lastMousePos[0] = xpos;
   p->lastMousePos[1] = ypos;
@@ -80,7 +70,7 @@ void windowKeyCallback(GLFWwindow *w, i32 key, i32 scode, i32 action, i32 mods)
     setActiveTool(p->wim, TOOL_NAV);
   }
   if(key == GLFW_KEY_2) {
-    setActiveTool(p->wim, TOOL_SELECT);
+    setActiveTool(p->wim, TOOL_SEL);
   }
 }
 
@@ -114,8 +104,6 @@ Platform *createPlatform(char *shaderDir)
   Platform *p = malloc(sizeof(Platform));
   p->winWidth = minWidth;
   p->winHeight = minHeight;
-  p->mouseLeftPressed = 0;
-  p->sceneDragActive = 0;
   p->lastMousePos[0] = -1.0;
   p->lastMousePos[1] = -1.0;
   createWindow(p);
