@@ -31,7 +31,6 @@ SceneWim *createSceneWim(char *shaderDir)
   initStandardUniformf(&s->imgTexDim, 2, &s->imgShader, "texDim");
   initStandardUniformf(&s->zoomCenter, 2, &s->imgShader, "zoomCenter");
   initStandardUniformf(&s->selCoordUni, 4, &s->selShader, "selCoord");
-  initStandardUniformf(&s->selRes, 2, &s->selShader, "selRes");
   return s;
 }
 
@@ -101,7 +100,6 @@ void updateSceneDimensions(SceneWim *s,
                            f32 w, f32 h, f32 x0, f32 y0, f32 x1, f32 y1)
 {
   s->res[0] = w; s->res[1] = h;
-  s->selRes.vec[0] = w; s->selRes.vec[1] = h;
   s->sceneCoord[0] = x0; s->sceneCoord[1] = y0;
   s->sceneCoord[2] = x1; s->sceneCoord[3] = y1;
   updateGeomData(&s->imgGeom, 1, x0 / w,
@@ -257,16 +255,21 @@ void calculateSelCoord(SceneWim *s)
   s->selCoord[1] = y0;
   s->selCoord[2] = x1;
   s->selCoord[3] = y1;
+  printf("%f %f %f %f\n", x0, y0, x0, y1);
   s->selCoordUni.vec[0] = x0 + sx;
-  s->selCoordUni.vec[1] = sh - y0 + sy;
+  s->selCoordUni.vec[1] = sh - y1 + sy;
   s->selCoordUni.vec[2] = x1 + sx;
-  s->selCoordUni.vec[3] = sh - y1 + sy;
+  s->selCoordUni.vec[3] = sh - y0 + sy;
   clipToScene(s, &x0, &y0, &x1, &y1);
 
-  updateGeomData(&s->selGeom, 1, (x0 + sx) / s->res[0],
-                                 (sh - y0 + sy) / s->res[1],
-                                 (x1 + sx) / s->res[0],
-                                 (sh - y1 + sy) / s->res[1]);
+  //updateGeomData(&s->selGeom, 1, -1.0,
+  //                               -1.0,
+  //                               1.0,
+  //                               1.0);
+  updateGeomData(&s->selGeom, 1, (x0 + sx - 1) / s->res[0],
+                                 (sh - y0 + sy + 1) / s->res[1],
+                                 (x1 + sx + 1) / s->res[0],
+                                 (sh - y1 + sy - 1) / s->res[1]);
 }
 
 
@@ -287,7 +290,6 @@ void drawSelect(SceneWim *s)
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   loadUniformf(&s->selCoordUni);
-  loadUniformf(&s->selRes);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s->indices.id);
   glDrawElements(GL_TRIANGLES, s->indices.count, GL_UNSIGNED_SHORT, 0);
