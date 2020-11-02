@@ -28,6 +28,6 @@ void render(Platform *p);
 void printOpenGLInfo();
 
 f64 getCurrentTime();
-f64 getDiffToStartTime(Platform *p);
+f64 getDiffToStartTime();
 
 #endif

@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "platform.h"
+
 
 SceneWim *createSceneWim(char *shaderDir)
 {
@@ -31,6 +33,7 @@ SceneWim *createSceneWim(char *shaderDir)
   initStandardUniformf(&s->imgTexDim, 2, &s->imgShader, "texDim");
   initStandardUniformf(&s->zoomCenter, 2, &s->imgShader, "zoomCenter");
   initStandardUniformf(&s->selCoordUni, 4, &s->selShader, "selCoord");
+  initStandardUniformf(&s->selTime, 1, &s->selShader, "time");
   return s;
 }
 
@@ -266,10 +269,10 @@ void calculateSelCoord(SceneWim *s)
   //                               -1.0,
   //                               1.0,
   //                               1.0);
-  updateGeomData(&s->selGeom, 1, (x0 + sx - 1) / s->res[0],
-                                 (sh - y0 + sy + 1) / s->res[1],
-                                 (x1 + sx + 1) / s->res[0],
-                                 (sh - y1 + sy - 1) / s->res[1]);
+  updateGeomData(&s->selGeom, 1, (x0 + sx - 10) / s->res[0],
+                                 (sh - y0 + sy + 10) / s->res[1],
+                                 (x1 + sx + 10) / s->res[0],
+                                 (sh - y1 + sy - 10) / s->res[1]);
 }
 
 
@@ -290,6 +293,8 @@ void drawSelect(SceneWim *s)
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   loadUniformf(&s->selCoordUni);
+  s->selTime.vec[0] = (f32) getDiffToStartTime();
+  loadUniformf(&s->selTime);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s->indices.id);
   glDrawElements(GL_TRIANGLES, s->indices.count, GL_UNSIGNED_SHORT, 0);

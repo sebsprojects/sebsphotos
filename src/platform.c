@@ -9,6 +9,7 @@ static i32 minWidth = 500;
 static i32 minHeight = 300;
 
 static struct timespec tspec;
+static f64 startTime = 0.0;
 
 // ---------------------------------------------------------------------------
 
@@ -101,6 +102,7 @@ void createWindow(Platform *platform)
 
 Platform *createPlatform(char *shaderDir)
 {
+  startTime = getCurrentTime();
   Platform *p = malloc(sizeof(Platform));
   p->winWidth = minWidth;
   p->winHeight = minHeight;
@@ -155,9 +157,8 @@ f64 getCurrentTime()
   return tspec.tv_sec + (tspec.tv_nsec / 1.0e9);
 }
 
-f64 getDiffToStartTime(Platform *p)
+f64 getDiffToStartTime()
 {
-  //return getCurrentTime() - p->startTime;
-  return 0.0;
+  return getCurrentTime() - startTime;
 }
 

@@ -19,6 +19,7 @@ struct SceneWim {
   Uniformf imgTexDim;
   Uniformf zoomCenter;
   Uniformf selCoordUni;
+  Uniformf selTime;
   Texture *imgTex;
   f32 imgTexOffs[2];
   f32 res[2];
