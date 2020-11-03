@@ -10,9 +10,9 @@ i32 main(int argc, char **argv)
   char *shaderDir = "shader";
   Platform *platform = createPlatform(shaderDir);
   // TEMP
-  Texture *tex = allocTextureFromJPG("test/test_2.jpg");
+  Texture *tex = allocTextureFromJPG("test/test_3.jpg");
   initTexture(tex);
-  updateImgTex(platform->wim, tex);
+  updateImgTex(platform->ws, tex);
   // Main loop
   while (!glfwWindowShouldClose(platform->window)) {
     render(platform);

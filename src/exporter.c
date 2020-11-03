@@ -24,12 +24,13 @@ Exporter *createExporter(char *shaderDir)
   e->fboTex = allocEmptyTexture(4096, 4096);
   initTexture(e->fboTex);
   initFBO(e);
-  initStandardShader(&e->exportShader, shaderDir, "export");
-  initStandardIBO(&e->indices);
-  initStandardGeom(&e->geom, &e->exportShader, "in_position");
-  initStandardTexCoord(&e->texCoord, &e->exportShader, "in_texcoord");
-  initStandardUniformf(&e->texDim, 2, &e->exportShader, "texDim");
-  updateGeomData(&e->geom, 0, -1.0, -1.0, 1.0, 1.0);
+  initShader(&e->exportShader, shaderDir, "export");
+  initIBO(&e->indices, 6);
+  updateIBOData(&e->indices, 0, 6, IBO_DATA_SQUARE);
+  initVBO(&e->geom, 16, 4, &e->exportShader, "in_position");
+  initVBO(&e->texCoord, 8, 2, &e->exportShader, "in_texcoord");
+  initUniformf(&e->texDim, 2, &e->exportShader, "texDim");
+  setGeomData(&e->geom, 0, 0, -1.0, -1.0, 1.0, 1.0);
   return e;
 }
 

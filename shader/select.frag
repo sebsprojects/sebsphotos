@@ -1,66 +1,56 @@
 precision highp float;
 
-uniform float time;
 uniform vec4 selCoord;
+uniform float time;
 
-bool inRange(in float v, in float l, in float u)
+
+bool inRange(in float x, in float a, in float b)
 {
-  return v >= l && v < u;
+  return x >= a && x < b;
 }
 
-float sdBox(in vec2 p, in vec2 l)
+float box(in vec2 p, in float t)
 {
-  vec2 d = abs(p) - l;
-  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
-}
-
-// continuously map the outline of the box to [0, 2 * w + 2 * h]
-// counter-clockwise, starting at
-float mapBoxToLine(in vec2 p)
-{
-  vec2 a = p - selCoord.xy;
-  vec2 b = p - selCoord.zw;
-  vec2 wh = selCoord.zw - selCoord.xy;
-  float v = 0.0;
-  if(abs(a.x) < 1.0 && a.y > -1.0 && b.y < 0.0) {
+  vec2 wh = selCoord.zw - selCoord.xy + vec2(2.0 * t);
+  vec2 a = p - selCoord.xy + vec2(t);
+  float v = -1.0;
+  if(inRange(selCoord.x - p.x, 0.0, t) &&
+     inRange(p.y, selCoord.y, selCoord.w + t)) {
     v = wh.y - a.y;
-  } else if(abs(a.y) < 1.0 && a.x > 0.0 && b.x < 1.0) {
+  } else if(inRange(selCoord.y - p.y, 0.0, t) &&
+            inRange(p.x, selCoord.x - t, selCoord.z)) {
     v = wh.y + a.x;
-  } else if(abs(b.x) < 1.0 && a.y > 0.0 && b.y < 1.0) {
+  } else if(inRange(p.x - selCoord.z, 0.0, t) &&
+            inRange(p.y, selCoord.y - t, selCoord.w)) {
     v = wh.x + wh.y + a.y;
-  } else if(abs(b.y) < 1.0 && a.x > -1.0 && b.x < 0.0) {
-    v = wh.x + 2.0 * wh.y + wh.x - a.x;
+  } else if(inRange(p.y - selCoord.w, 0.0, t) &&
+            inRange(p.x, selCoord.x, selCoord.z + t)) {
+    v = 2.0 * (wh.x + wh.y) - a.x;
   }
   return v;
 }
 
-// TODO: Calculate how many segments with pw, then find a fractional with
-// close to pw such that we get only full segments
 float boxPattern(in float v, in float total)
 {
-  float pw = 6.0;
+  float pw = 12.0;
   float cnt = total / pw;
   float rem = mod(total, pw);
   pw += rem / cnt;
   float m = mod(v, pw);
-  return m < pw * 0.5 ? 0.0 : 1.0;
+  return m < pw * 0.5 ? 0.2 : 0.9;
 }
 
 void main()
 {
   vec2 p = gl_FragCoord.xy;
-  vec2 xy = selCoord.xy;
   vec2 wh = selCoord.zw - selCoord.xy;
-  float v = sdBox(p - (xy + 0.5 * wh), 0.5 * wh);
-  float x = 2.0 * (wh.x + wh.y);
-  float t = -time * 30.0;
-  if(inRange(v, 0.0, 1.0)) {
-    //vec3 col = vec3(mapBoxToLine(p) / x);
-    vec3 col = vec3(boxPattern(mapBoxToLine(p) + t, x));
-    //vec3 col = vec3(1.0);
-    gl_FragColor = vec4(col, 1.0);
-  } else {
+  vec3 col = vec3(0.0);
+  float t = 2.0;
+  float sum = 2.0 * (wh.x + wh.y + 4.0 * t);
+  float v = box(p, t);
+  if(v < 0.0) {
     discard;
   }
+  col = vec3(boxPattern(v + time * 50.0, sum));
+  gl_FragColor = vec4(col, 1.0);
 }
-

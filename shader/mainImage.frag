@@ -4,23 +4,29 @@ uniform sampler2D tex;
 
 uniform vec2 texDim;
 uniform vec2 zoomCenter;
+uniform float selClip;
+uniform vec4 selBounds;
 
 varying vec2 texCoord;
 
 void main()
 {
   vec3 fragColor;
-  if(texCoord.x < 0.0 || texCoord.y < 0.0 ||
-     texCoord.x > texDim.x || texCoord.y > texDim.y) {
-    fragColor = vec3(0.0);
+  vec2 lb;
+  vec2 ub;
+  if(selClip >= 0.0) {
+    lb = selBounds.xy;
+    ub = selBounds.zw;
+  } else {
+    lb = vec2(0.0);
+    ub = texDim.xy;
+  }
+  if(texCoord.x < lb.x || texCoord.y < lb.y ||
+     texCoord.x > ub.x || texCoord.y > ub.y) {
+    discard;
   } else {
     fragColor = texture2D(tex, texCoord / texDim).xyz;
-  }
-  if(length(texCoord - zoomCenter) < 20.0) {
-    fragColor = vec3(1.0, 0.0, 0.0);
   }
   gl_FragColor = vec4(fragColor.xyz, 1.0);
 }
 
-//fragColor = vec3(texCoord.xy, 0.0);
-//fragColor = vec3(gl_FragCoord.x / 640.0, 0.0, 0.0);

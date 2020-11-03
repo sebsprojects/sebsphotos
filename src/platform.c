@@ -27,7 +27,7 @@ void windowResizeCallback(GLFWwindow *w, i32 newWidth, i32 newHeight)
   p->winWidth = newWidth;
   p->winHeight = newHeight;
   updateViewport(p);
-  updateSceneDimensions(p->wim, newWidth, newHeight,
+  updateSceneDimensions(p->ws, newWidth, newHeight,
                         5.0, 5.0, newWidth - 200.0, newHeight - 5.0);
 }
 
@@ -36,7 +36,7 @@ void windowScrollCallback(GLFWwindow *w, f64 xoffs, f64 yoffs)
   Platform *p = (Platform *) glfwGetWindowUserPointer(w);
   f64 cx = 0.0; f64 cy = 0.0;
   glfwGetCursorPos(w, &cx, &cy);
-  handleMouseScroll(p->wim, cx, cy, yoffs);
+  handleMouseScroll(p->ws, cx, cy, yoffs);
 }
 
 void windowMouseButtonCallback(GLFWwindow *w, i32 button, i32 action, i32 mods)
@@ -45,10 +45,10 @@ void windowMouseButtonCallback(GLFWwindow *w, i32 button, i32 action, i32 mods)
   f64 cx = 0.0; f64 cy = 0.0;
   glfwGetCursorPos(w, &cx, &cy);
   if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-    handleMousePress(p->wim, cx, cy);
+    handleMousePress(p->ws, cx, cy);
   }
   if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-    handleMouseRelease(p->wim);
+    handleMouseRelease(p->ws);
   }
 }
 
@@ -58,7 +58,7 @@ void windowMousePosCallback(GLFWwindow *w, f64 xpos, f64 ypos)
   if(p->lastMousePos[0] >= 0.0 && p->lastMousePos[1] >= 0.0) {
     f32 dx = (f32) p->lastMousePos[0] - xpos;
     f32 dy = (f32) p->lastMousePos[1] - ypos;
-    handleMouseMove(p->wim, (f32) xpos, (f32) ypos, dx, dy);
+    handleMouseMove(p->ws, (f32) xpos, (f32) ypos, dx, dy);
   }
   p->lastMousePos[0] = xpos;
   p->lastMousePos[1] = ypos;
@@ -68,10 +68,13 @@ void windowKeyCallback(GLFWwindow *w, i32 key, i32 scode, i32 action, i32 mods)
 {
   Platform *p = (Platform *) glfwGetWindowUserPointer(w);
   if(key == GLFW_KEY_1) {
-    setActiveTool(p->wim, TOOL_NAV);
+    setActiveTool(p->ws, TOOL_NAV);
   }
   if(key == GLFW_KEY_2) {
-    setActiveTool(p->wim, TOOL_SEL);
+    setActiveTool(p->ws, TOOL_SEL);
+  }
+  if(key == GLFW_KEY_C && action == GLFW_PRESS) {
+    toggleImgSelClip(p->ws);
   }
 }
 
@@ -110,14 +113,14 @@ Platform *createPlatform(char *shaderDir)
   p->lastMousePos[1] = -1.0;
   createWindow(p);
   initGL();
-  p->wim = createSceneWim(shaderDir);
+  p->ws = createWorkspace(shaderDir);
   return p;
 }
 
 void destroyPlatform(Platform *p)
 {
   if(p->window != 0) { glfwDestroyWindow(p->window); }
-  if(p->wim != 0) { destroySceneWim(p->wim); }
+  if(p->ws != 0) { destroyWorkspace(p->ws); }
   glfwTerminate();
   free(p);
 }
@@ -138,7 +141,7 @@ void updateViewport(Platform *p)
 void render(Platform *p)
 {
   glClear(GL_COLOR_BUFFER_BIT);
-  drawSceneWim(p->wim);
+  drawWorkspace(p->ws);
 }
 
 void printOpenGLInfo()

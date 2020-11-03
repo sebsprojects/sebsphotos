@@ -22,7 +22,7 @@ struct ShaderProgram {
 };
 typedef struct ShaderProgram ShaderProgram;
 
-void initStandardShader(ShaderProgram *p, char* shaderDir, char *shaderName);
+void initShader(ShaderProgram *p, char* shaderDir, char *shaderName);
 
 void compileAndLinkShader(ShaderProgram *p, char *vertSrc, char *fragSrc);
 

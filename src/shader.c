@@ -4,7 +4,8 @@
 
 #include "shader.h"
 
-void initStandardShader(ShaderProgram *p, char* shaderDir, char *shaderName)
+
+void initShader(ShaderProgram *p, char* shaderDir, char *shaderName)
 {
   p->vert = 0; p->frag = 0; p-> prog = 0;
   p->error = SHADER_NOERROR;

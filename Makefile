@@ -1,4 +1,4 @@
-CC_FLAGS = -Wall -O3 -std=c99 -D_XOPEN_SOURCE=500 -I./lib/include
+CC_FLAGS = -Wall -O3 -std=c99 -D_XOPEN_SOURCE=500 -I./lib/include -I./res
 LN_FLAGS = -L./lib/bin -lm -lglfw -lGLESv2 -ljpeg
 
 CC = gcc
