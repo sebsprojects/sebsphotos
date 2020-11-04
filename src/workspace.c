@@ -101,8 +101,8 @@ void updateImgTex(Workspace *s, Texture *tex)
   s->imgTexDim.vec[0] = tex->texWidth;
   s->imgTexDim.vec[1] = tex->texHeight;
   s->selSize = 300.0;
-  s->selOffs[0] = 0.5 * s->selSize * s->selAspect[0];
-  s->selOffs[1] = 0.5 * s->selSize * s->selAspect[1];
+  s->selOffs[0] = 0; // 0.5 * s->selSize * s->selAspect[0];
+  s->selOffs[1] = 0; // 0.5 * s->selSize * s->selAspect[1];
   calculateTexCoord(s);
   calculateSelCoord(s);
 }
@@ -166,7 +166,10 @@ void updateImgDrag(Workspace *s, f32 dx, f32 dy)
 
 void updateSelScroll(Workspace *s, f32 cx, f32 cy, f32 scroll)
 {
-  s->selSize += 100 * scroll;
+  scroll *= 100;;
+  s->selSize += scroll;
+  s->selOffs[0] -= scroll;
+  s->selOffs[1] -= scroll;
   calculateSelCoord(s);
 }
 
@@ -262,12 +265,12 @@ void calculateSelCoord(Workspace *s)
   f32 zoom = 1.0 / scrollToScale(s->scrollLevel);
   f32 x = s->selOffs[0];
   f32 y = s->selOffs[1];
-  f32 w = 0.5 * (s->selAspect[0] * s->selSize);
-  f32 h = 0.5 * (s->selAspect[1] * s->selSize);
+  f32 w = s->selAspect[0] * s->selSize;
+  f32 h = s->selAspect[1] * s->selSize;
 
   // Bounds in scene space
-  f32 x0 = zoom * (x - w - s->scrollT[0]) - s->scrollOffs[0] - s->imgTexOffs[0];
-  f32 y0 = zoom * (y - h - s->scrollT[1]) - s->scrollOffs[1] - s->imgTexOffs[1];
+  f32 x0 = zoom * (x - s->scrollT[0]) - s->scrollOffs[0] - s->imgTexOffs[0];
+  f32 y0 = zoom * (y - s->scrollT[1]) - s->scrollOffs[1] - s->imgTexOffs[1];
   f32 x1 = zoom * (x + w - s->scrollT[0]) - s->scrollOffs[0] - s->imgTexOffs[0];
   f32 y1 = zoom * (y + h - s->scrollT[1]) - s->scrollOffs[1] - s->imgTexOffs[1];
   x0 = roundf(x0); y0 = roundf(y0);
@@ -303,6 +306,9 @@ void drawWorkspace(Workspace *s)
 
 void drawSelect(Workspace *s)
 {
+  if(s->selClipActive) {
+    return;
+  }
   updateVBO(&s->selGeom);
 
   glUseProgram(s->selShader.prog);
