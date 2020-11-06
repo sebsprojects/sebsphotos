@@ -32,8 +32,13 @@ void initIBO(IBO *ibo, u32 c)
   ibo->id = 0;
   ibo->count = c;
   ibo->byteSize = sizeof(u16) * ibo->count;
-  ibo->mod = MOD_REALLOC;
-  ibo->data = calloc(c, sizeof(u16));
+  if(c > 0) {
+    ibo->mod = MOD_REALLOC;
+    ibo->data = calloc(c, sizeof(u16));
+  } else {
+    ibo->mod = NOT_MOD;
+    ibo->data = 0;
+  }
   glGenBuffers(1, &ibo->id);
 }
 
@@ -44,8 +49,13 @@ void initVBO(VBO *vbo, u32 c, u32 d, ShaderProgram *p, char *an)
   vbo->count = c;
   vbo->dim = d;
   vbo->byteSize = sizeof(f32) * vbo->count * vbo->dim;
-  vbo->mod = MOD_REALLOC;
-  vbo->data = calloc(c * d, sizeof(f32));
+  if(c > 0) {
+    vbo->mod = MOD_REALLOC;
+    vbo->data = calloc(c * d, sizeof(f32));
+  } else {
+    vbo->mod = NOT_MOD;
+    vbo->data = 0;
+  }
   glGenBuffers(1, &vbo->id);
   if(p != 0) {
     vbo->loc = glGetAttribLocation(p->prog, an);
@@ -54,28 +64,45 @@ void initVBO(VBO *vbo, u32 c, u32 d, ShaderProgram *p, char *an)
 
 void updateVBOData(VBO *vbo, u32 count, u32 offs, f32 *data)
 {
+  if(count == 0) {
+    return;
+  }
   if(vbo->count < offs + count) {
-    vbo->byteSize = (offs + count) * vbo->dim * sizeof(f32);
+    vbo->count = offs + count;
+    vbo->byteSize = vbo->count * vbo->dim * sizeof(f32);
     setVBOMod(vbo, MOD_REALLOC);
-    vbo->data = (f32*) realloc(vbo->data, vbo->byteSize);
+    if(vbo->data == 0) {
+      vbo->data = calloc(vbo->count * vbo->dim, sizeof(f32));
+    } else {
+      vbo->data = (f32*) realloc(vbo->data, vbo->byteSize);
+    }
   } else {
     setVBOMod(vbo, MOD_REPLACE);
   }
-  for(u32 i = 0; i < count; i++) {
-    vbo->data[offs + i] = data[i];
+  if(data != 0) {
+    for(u32 i = 0; i < count; i++) {
+      vbo->data[offs + i] = data[i];
+    }
   }
 }
 
 void updateIBOData(IBO *ibo, u32 count, u32 offs, u16 *data) {
   if(ibo->count < offs + count) {
-    ibo->byteSize = (offs + count) * sizeof(u16);
+    ibo->count = offs + count;
+    ibo->byteSize = ibo->count * sizeof(u16);
     setIBOMod(ibo, MOD_REALLOC);
-    ibo->data = (u16*) realloc(ibo->data, ibo->byteSize);
+    if(ibo->data == 0) {
+      ibo->data = calloc(ibo->count, sizeof(u16));
+    } else {
+      ibo->data = (u16*) realloc(ibo->data, ibo->byteSize);
+    }
   } else {
     setIBOMod(ibo, MOD_REPLACE);
   }
-  for(u32 i = 0; i < count; i++) {
-    ibo->data[offs + i] = data[i];
+  if(data != 0) {
+    for(u32 i = 0; i < count; i++) {
+      ibo->data[offs + i] = data[i];
+    }
   }
 }
 
@@ -147,6 +174,17 @@ void setTexCData(VBO *vbo, u32 offs, f32 u0, f32 v0, f32 u1, f32 v1)
   vbo->data[offs + 4] = u1; vbo->data[offs + 5] = v1; // upper right
   vbo->data[offs + 6] = u0; vbo->data[offs + 7] = v1; // upper left
   setVBOMod(vbo, MOD_REPLACE);
+}
+
+void setStandardIndexData(IBO *ibo, u32 offs, u32 add)
+{
+  ibo->data[offs + 0] = add + 0;
+  ibo->data[offs + 1] = add + 1;
+  ibo->data[offs + 2] = add + 2;
+  ibo->data[offs + 3] = add + 2;
+  ibo->data[offs + 4] = add + 3;
+  ibo->data[offs + 5] = add + 0;
+  setIBOMod(ibo, MOD_REPLACE);
 }
 
 bool isInBounds(f32 x, f32 y, f32 *dims)

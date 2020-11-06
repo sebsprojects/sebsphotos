@@ -78,6 +78,7 @@ void loadUniformf(Uniformf *u);
 
 void setGeomData(VBO* vbo, bool norm, u32 offs, f32 x0, f32 y0, f32 x1, f32 y1);
 void setTexCData(VBO* vbo, u32 offs, f32 u0, f32 v0, f32 u1, f32 v1);
+void setStandardIndexData(IBO *ibo, u32 offs, u32 add);
 
 bool isInBounds(f32 x, f32 y, f32 *dims);
 void toClipSpace(f32 *array, u32 count, u32 offs);

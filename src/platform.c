@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "platform.h"
+#include "text.h"
 
 
 static i32 minWidth = 500;
@@ -10,6 +11,8 @@ static i32 minHeight = 300;
 
 static struct timespec tspec;
 static f64 startTime = 0.0;
+
+static Text *t = 0;
 
 // ---------------------------------------------------------------------------
 
@@ -27,6 +30,8 @@ void windowResizeCallback(GLFWwindow *w, i32 newWidth, i32 newHeight)
   p->winWidth = newWidth;
   p->winHeight = newHeight;
   updateViewport(p);
+  t->res.vec[0] = newWidth;
+  t->res.vec[1] = newHeight;
   updateSceneDimensions(p->ws, newWidth, newHeight,
                         5.0, 5.0, newWidth - 200.0, newHeight - 5.0);
 }
@@ -103,6 +108,7 @@ void createWindow(Platform *platform)
   glfwSwapInterval(1);
 }
 
+
 Platform *createPlatform(char *shaderDir)
 {
   startTime = getCurrentTime();
@@ -114,6 +120,8 @@ Platform *createPlatform(char *shaderDir)
   createWindow(p);
   initGL();
   p->ws = createWorkspace(shaderDir);
+  t = createText(shaderDir);
+  updateText(t, "sebsphotos is great.,_Isn't it RIGHT?");
   return p;
 }
 
@@ -141,7 +149,8 @@ void updateViewport(Platform *p)
 void render(Platform *p)
 {
   glClear(GL_COLOR_BUFFER_BIT);
-  drawWorkspace(p->ws);
+  //drawWorkspace(p->ws);
+  drawText(t);
 }
 
 void printOpenGLInfo()
