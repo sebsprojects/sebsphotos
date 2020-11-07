@@ -13,7 +13,7 @@ void main()
   float fw = abs(dx) + abs(dy);
   float scale = 1.0 / fw;
   float sd = (current - 0.5) * scale;
-  float color = clamp(sd + 0.7, 0.0, 1.0);
+  float color = clamp(sd + 0.5, 0.0, 1.0);
   float alpha = clamp(sd + 0.7 + 0.0125 * scale, 0.0, 1.0);
   //gl_FragColor = vec4(1.0);
   //gl_FragColor = vec4(color, 1.0, 1.0, 1.0);

@@ -20,7 +20,7 @@ typedef struct Texture Texture;
 
 Texture *allocTextureFromJPG(char *filePath);
 Texture *allocEmptyTexture(u32 width, u32 height);
-void initTexture(Texture *t);
+void initTexture(Texture *t, GLenum minFilter, GLenum magFilter);
 
 void destroyTexture(Texture *tc);
 

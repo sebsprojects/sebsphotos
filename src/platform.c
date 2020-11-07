@@ -1,9 +1,8 @@
+#include "platform.h"
+
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
-
-#include "platform.h"
-#include "text.h"
 
 
 static i32 minWidth = 500;
@@ -11,8 +10,6 @@ static i32 minHeight = 300;
 
 static struct timespec tspec;
 static f64 startTime = 0.0;
-
-static Text *t = 0;
 
 // ---------------------------------------------------------------------------
 
@@ -30,10 +27,10 @@ void windowResizeCallback(GLFWwindow *w, i32 newWidth, i32 newHeight)
   p->winWidth = newWidth;
   p->winHeight = newHeight;
   updateViewport(p);
-  t->res.vec[0] = newWidth;
-  t->res.vec[1] = newHeight;
   updateSceneDimensions(p->ws, newWidth, newHeight,
-                        5.0, 5.0, newWidth - 200.0, newHeight - 5.0);
+                        0.0, 0.0, newWidth - 200.0, newHeight);
+  updateInfopanelDimensions(p->inf, newWidth, newHeight,
+                            newWidth - 200.0, 0.0, 200.0, newHeight);
 }
 
 void windowScrollCallback(GLFWwindow *w, f64 xoffs, f64 yoffs)
@@ -120,8 +117,9 @@ Platform *createPlatform(char *shaderDir)
   createWindow(p);
   initGL();
   p->ws = createWorkspace(shaderDir);
-  t = createText(shaderDir);
-  updateText(t, "sebsphotos is great.,_Isn't it RIGHT?");
+  p->inf = createInfopanel(shaderDir);
+  p->ws->infopanel = p->inf;
+  p->inf->workspace = p->ws;
   return p;
 }
 
@@ -129,6 +127,7 @@ void destroyPlatform(Platform *p)
 {
   if(p->window != 0) { glfwDestroyWindow(p->window); }
   if(p->ws != 0) { destroyWorkspace(p->ws); }
+  if(p->inf != 0) { destroyInfopanel(p->inf); }
   glfwTerminate();
   free(p);
 }
@@ -149,8 +148,8 @@ void updateViewport(Platform *p)
 void render(Platform *p)
 {
   glClear(GL_COLOR_BUFFER_BIT);
-  //drawWorkspace(p->ws);
-  drawText(t);
+  drawWorkspace(p->ws);
+  drawInfopanel(p->inf);
 }
 
 void printOpenGLInfo()

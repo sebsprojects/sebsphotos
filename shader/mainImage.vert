@@ -1,9 +1,6 @@
 attribute vec2 in_position;
 attribute vec2 in_texcoord;
 
-uniform vec2 texDim;
-uniform vec2 zoomCenter;
-
 varying vec2 texCoord;
 
 void main() {

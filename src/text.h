@@ -11,15 +11,18 @@ struct Text {
   VBO geom;
   VBO texC;
   IBO indices;
-  Uniformf res;
-  ShaderProgram textShader;
+  Uniformf uDims;
+  Uniformf *rel_res;
+  ShaderProgram *rel_textShader;
 };
 typedef struct Text Text;
 
-Text *createText();
+void initText(Text *t, ShaderProgram *rel_textShader, Uniformf *rel_res);
 void destroyText(Text *t);
 
 void updateText(Text *t, char *newText);
-void updatePos(Text *t, f32 x, f32 y);
+void updateTextDimensions(Text *t, f32 x, f32 y, f32 size);
+
+void drawText(Text *t);
 
 #endif

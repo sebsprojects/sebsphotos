@@ -5,11 +5,16 @@
 #include "shader.h"
 #include "texture.h"
 
+
+struct Infopanel;
+
 enum Tool {
   TOOL_NAV = 0,
   TOOL_SEL = 1
 };
+
 struct Workspace {
+  struct Infopanel *infopanel;
   ShaderProgram imgShader;
   ShaderProgram selShader;
   VBO selGeom;

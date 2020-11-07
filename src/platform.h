@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "workspace.h"
+#include "infopanel.h"
 
 
 struct Platform {
@@ -13,6 +14,7 @@ struct Platform {
   i32 winWidth;
   i32 winHeight;
   Workspace *ws;
+  Infopanel *inf;
   f64 lastMousePos[2];
 };
 typedef struct Platform Platform;

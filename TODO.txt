@@ -4,13 +4,13 @@ WORKSPACE
 - reset select
 
 - select shader
-- blend-out out-of-select
 - make sure the initial resize event happens after SceneWim initialization
 
 EXPORT
 
 INFO PANEL
-- text rendering
+- Basic Info: img name, img size
+              sel size, sel aspect, sel position
 
 FILE PANEL
 

@@ -11,7 +11,7 @@ i32 main(int argc, char **argv)
   Platform *platform = createPlatform(shaderDir);
   // TEMP
   Texture *tex = allocTextureFromJPG("test/test_3.jpg");
-  initTexture(tex);
+  initTexture(tex, GL_NEAREST, GL_LINEAR);
   updateImgTex(platform->ws, tex);
   // Main loop
   while (!glfwWindowShouldClose(platform->window)) {

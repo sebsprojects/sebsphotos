@@ -22,7 +22,7 @@ Exporter *createExporter(char *shaderDir)
 {
   Exporter *e = malloc(sizeof(Exporter));
   e->fboTex = allocEmptyTexture(4096, 4096);
-  initTexture(e->fboTex);
+  initTexture(e->fboTex, GL_NEAREST, GL_NEAREST);
   initFBO(e);
   initShader(&e->exportShader, shaderDir, "export");
   initIBO(&e->indices, 6);

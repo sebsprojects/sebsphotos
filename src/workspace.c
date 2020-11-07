@@ -5,11 +5,13 @@
 #include <math.h>
 
 #include "platform.h"
+#include "infopanel.h"
 
 
 Workspace *createWorkspace(char *shaderDir)
 {
   Workspace *s = malloc(sizeof(Workspace));
+  s->infopanel = 0;
   s->imgTex = 0;
   s->scrollLevel = 0;
   s->activeTool = TOOL_NAV;
@@ -35,7 +37,7 @@ Workspace *createWorkspace(char *shaderDir)
   initVBO(&s->imgGeom, 4, 2, &s->imgShader, "in_position");
   initVBO(&s->selGeom, 4, 2, &s->selShader, "in_position");
   initVBO(&s->imgTexC, 4, 2, &s->imgShader, "in_texcoord");
-  initUniformf(&s->imgTexDim, 2, &s->imgShader, "texDim");
+  initUniformf(&s->imgTexDim, 4, &s->imgShader, "texDim");
   initUniformf(&s->imgZoomCenter, 2, &s->imgShader, "zoomCenter");
   initUniformf(&s->imgSelBounds, 4, &s->imgShader, "selBounds");
   initUniformf(&s->imgSelClip, 1, &s->imgShader, "selClip");
@@ -100,6 +102,8 @@ void updateImgTex(Workspace *s, Texture *tex)
   s->imgTex->samplerLoc = glGetUniformLocation(s->imgShader.prog, "tex");
   s->imgTexDim.vec[0] = tex->texWidth;
   s->imgTexDim.vec[1] = tex->texHeight;
+  s->imgTexDim.vec[2] = tex->imgWidth;
+  s->imgTexDim.vec[3] = tex->imgHeight;
   s->selSize = 300.0;
   s->selOffs[0] = 0; // 0.5 * s->selSize * s->selAspect[0];
   s->selOffs[1] = 0; // 0.5 * s->selSize * s->selAspect[1];
