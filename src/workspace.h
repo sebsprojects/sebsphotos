@@ -54,7 +54,7 @@ void handleMouseRelease(Workspace *s);
 void handleMouseMove(Workspace *s, f32 cx, f32 cy, f32 dx, f32 dy);
 void handleMouseScroll(Workspace *s, f32 cx, f32 cy, f32 scroll);
 
-void updateImgTex(Workspace *s, Texture *tex);
+void updateImgTex(Workspace *s, Texture *tex, char *fileName);
 void updateSceneDimensions(Workspace *s, f32 w, f32 h, f32 x0, f32 y0,
                            f32 x1, f32 y1);
 

@@ -1,6 +1,8 @@
 #include "infopanel.h"
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "workspace.h"
 
@@ -22,12 +24,9 @@ Infopanel *createInfopanel(char *shaderDir)
   initText(&inf->selCoord, &inf->textShader, &inf->textRes);
   updateText(&inf->sebText, "sebsphotos v?");
   updateText(&inf->imgHeading, "Image");
-  updateText(&inf->imgName, "Name:");
-  updateText(&inf->imgSize, "Size:");
+  updateInfoImg(inf, 0, -1, -1);
+  updateInfoSel(inf, 0, 0);
   updateText(&inf->selHeading, "Select");
-  updateText(&inf->selAspect, "Aspect:");
-  updateText(&inf->selSize, "Size:");
-  updateText(&inf->selCoord, "Coord:");
   return inf;
 }
 
@@ -42,6 +41,45 @@ void destroyInfopanel(Infopanel *inf)
   destroyText(&inf->selAspect);
   destroyText(&inf->selCoord);
   free(inf);
+}
+
+void updateInfoImg(Infopanel *inf, char *fileName, i32 w, i32 h)
+{
+  //TODO: 100 is a good guess but may possibly fail
+  if(fileName == 0 || w < 0.0 || h < 0.0) {
+    updateText(&inf->imgName, "Name: unknown");
+    updateText(&inf->imgSize, "Size: unknown");
+  } else {
+    char *buf = malloc(strlen(fileName) + 100);
+    sprintf(buf, "Name: %s", fileName);
+    updateText(&inf->imgName, buf);
+    sprintf(buf, "Size: %ix%i", w, h);
+    updateText(&inf->imgSize, buf);
+    free(buf);
+  }
+}
+
+void updateInfoSel(Infopanel *inf, f32 *selAspect, f32 *selBounds)
+{
+  if(selAspect == 0 || selBounds == 0) {
+    updateText(&inf->selSize,   "Size:   unknown");
+    updateText(&inf->selAspect, "Aspect: unknown");
+    updateText(&inf->selCoord,  "Coord:  unknown");
+  } else {
+    char *buf = malloc(8 + 4 * 10 + 100 + 1);
+    i32 w = (i32) (selBounds[2] - selBounds[0]);
+    i32 h = (i32) (selBounds[3] - selBounds[1]);
+    sprintf(buf, "Size:   %ix%i", w, h);
+    updateText(&inf->selSize, buf);
+    sprintf(buf, "Aspect: %.1g:%.1g", selAspect[0], selAspect[1]);
+    updateText(&inf->selAspect, buf);
+    sprintf(buf, "Coord:  %i %i :: %i %i", (i32) selBounds[0],
+                                          (i32) selBounds[1],
+                                          (i32) selBounds[2],
+                                          (i32) selBounds[3]);
+    updateText(&inf->selCoord, buf);
+    free(buf);
+  }
 }
 
 void updateInfopanelDimensions(Infopanel *inf, f32 w, f32 h, f32 x0, f32 y0,

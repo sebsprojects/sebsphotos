@@ -96,7 +96,7 @@ void handleMouseMove(Workspace *s, f32 cx, f32 cy, f32 dx, f32 dy)
   }
 }
 
-void updateImgTex(Workspace *s, Texture *tex)
+void updateImgTex(Workspace *s, Texture *tex, char *fileName)
 {
   s->imgTex = tex;
   s->imgTex->samplerLoc = glGetUniformLocation(s->imgShader.prog, "tex");
@@ -109,6 +109,7 @@ void updateImgTex(Workspace *s, Texture *tex)
   s->selOffs[1] = 0; // 0.5 * s->selSize * s->selAspect[1];
   calculateTexCoord(s);
   calculateSelCoord(s);
+  updateInfoImg(s->infopanel, fileName, tex->imgWidth, tex->imgHeight);
 }
 
 void updateSceneDimensions(Workspace *s,

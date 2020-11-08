@@ -31,6 +31,9 @@ void destroyInfopanel(Infopanel *inf);
 void updateInfopanelDimensions(Infopanel *inf, f32 w, f32 h, f32 x0, f32 y0,
                                f32 x1, f32 y1);
 
+void updateInfoSel(Infopanel *inf, f32 *selAspect, f32 *selBounds);
+void updateInfoImg(Infopanel *inf, char *fileName, i32 w, i32 h);
+
 void drawInfopanel(Infopanel *inf);
 
 #endif
